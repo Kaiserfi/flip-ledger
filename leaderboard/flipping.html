@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flipping Leaderboard</title>
+    <style>
+        :root {
+            --bg: #0a0d12;
+            --card: #121820;
+            --card-2: #0f141b;
+            --line: #1f2833;
+            --text: #e6edf3;
+            --muted: #8b97a6;
+            --dim: #5d6876;
+            --green: #3ddc84;
+            --green-soft: rgba(61, 220, 132, 0.12);
+            --blue: #4fb3ff;
+            --blue-soft: rgba(79, 179, 255, 0.12);
+            --gold: #f2b134;
+            --gold-soft: rgba(242, 177, 52, 0.12);
+            --red: #ff5f5f;
+            --silver: #c3cad3;
+            --bronze: #d98a4e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 36px 16px 48px;
+            background: radial-gradient(1200px 600px at 50% -200px, #16202c 0%, var(--bg) 60%);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        .wrap { max-width: 1140px; margin: 0 auto; }
+
+        header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; margin-bottom: 22px; }
+        h1 { margin: 0; font-size: 1.9rem; letter-spacing: -0.02em; }
+        h1 span { color: var(--green); }
+        .sub { color: var(--muted); margin: 4px 0 0; font-size: 0.92rem; }
+        .sub a { color: var(--muted); }
+        .sub a:hover { color: var(--text); }
+
+        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+        .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+        .seg button {
+            border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.88rem;
+            padding: 7px 14px; border-radius: 7px; cursor: pointer;
+        }
+        .seg button:hover { color: var(--text); }
+        .seg button[aria-selected="true"] { background: #1c2632; color: var(--text); box-shadow: inset 0 0 0 1px #2a3644; }
+        select {
+            background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+            padding: 7px 10px; font: inherit; font-size: 0.85rem;
+        }
+        .reset { color: var(--muted); font-size: 0.85rem; }
+        .reset b { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+        .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .card {
+            background: linear-gradient(180deg, var(--card), var(--card-2));
+            border: 1px solid var(--line); border-radius: 16px; padding: 18px 16px 12px;
+        }
+        .card h2 {
+            display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 0 4px 14px;
+            font-size: 1rem; font-weight: 650; border-bottom: 1px solid var(--line);
+        }
+        .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+        .ico svg { width: 18px; height: 18px; }
+        .ico.green { background: var(--green-soft); color: var(--green); }
+        .ico.blue { background: var(--blue-soft); color: var(--blue); }
+        .ico.gold { background: var(--gold-soft); color: var(--gold); }
+
+        .row {
+            display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+            padding: 11px 10px; border-radius: 12px; border: 1px solid transparent; margin-bottom: 4px;
+        }
+        .row.you { background: rgba(61, 220, 132, 0.06); border-color: rgba(61, 220, 132, 0.35); }
+        .rank { font-weight: 700; font-size: 0.95rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+        .rank.r1 { color: var(--gold); }
+        .rank.r2 { color: var(--silver); }
+        .rank.r3 { color: var(--bronze); }
+        .who { min-width: 0; }
+        .name { display: flex; align-items: center; gap: 7px; min-width: 0; }
+        .name strong { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pill { font-size: 0.68rem; font-weight: 650; padding: 2px 7px; border-radius: 5px; flex: none; letter-spacing: 0.02em; }
+        .pill.you { background: var(--green-soft); color: var(--green); }
+        .pill.t-bronze { background: rgba(217, 138, 78, 0.14); color: var(--bronze); }
+        .pill.t-silver { background: rgba(195, 202, 211, 0.12); color: var(--silver); }
+        .pill.t-gold { background: var(--gold-soft); color: var(--gold); }
+        .pill.t-rune { background: rgba(79, 179, 255, 0.14); color: var(--blue); }
+        .pill.t-dragon { background: rgba(255, 95, 95, 0.14); color: var(--red); }
+        .item { color: var(--muted); font-size: 0.8rem; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .val { text-align: right; min-width: 84px; }
+        .num { font-weight: 700; font-variant-numeric: tabular-nums; }
+        .num.pos { color: var(--green); }
+        .num.neg { color: var(--red); }
+        .num.flips { color: var(--text); }
+        .bar { height: 4px; border-radius: 3px; background: #1e2833; margin-top: 7px; overflow: hidden; }
+        .bar i { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+        .empty { color: var(--dim); font-size: 0.88rem; padding: 18px 10px; }
+
+        .foot { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--dim); font-size: 0.8rem; }
+        .foot b { color: var(--gold); font-weight: 600; }
+
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        @media (max-width: 520px) {
+            h1 { font-size: 1.5rem; }
+            .seg button { padding: 7px 10px; }
+            .card { padding: 14px 10px 8px; }
+            .row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; padding: 10px 8px; }
+            .val { min-width: 64px; }
+            .pill { padding: 2px 5px; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <div>
+            <h1>Flipping <span>Leaderboard</span></h1>
+            <p class="sub">LaidBackCrew Grand Exchange profit from Flip Ledger &middot; <a href="index.html">Skills leaderboard</a></p>
+        </div>
+        <div class="controls">
+            <div class="seg" role="tablist" aria-label="Time window">
+                <button role="tab" data-win="h1" aria-selected="true">1 hour</button>
+                <button role="tab" data-win="h12" aria-selected="false">12 hours</button>
+                <button role="tab" data-win="h24" aria-selected="false">24 hours</button>
+            </div>
+            <select id="me" aria-label="Highlight me"><option value="">Highlight me...</option></select>
+        </div>
+    </header>
+
+    <div class="reset" id="reset" style="margin:-8px 0 18px"></div>
+
+    <div class="grid">
+        <section class="card">
+            <h2><span class="ico green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Top profit</h2>
+            <div id="profit"></div>
+        </section>
+        <section class="card">
+            <h2><span class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>Most flips</h2>
+            <div id="flips"></div>
+        </section>
+        <section class="card">
+            <h2><span class="ico gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Best single flip</h2>
+            <div id="best"></div>
+        </section>
+    </div>
+
+    <div class="foot">
+        <span id="previous"></span>
+        <span id="status">Loading...</span>
+    </div>
+</div>
+
+<script>
+    // ===== Edit this: your Worker's address (no trailing slash) =====
+    const WORKER_URL = 'https://YOUR-WORKER.YOUR-NAME.workers.dev';
+    // =================================================================
+
+    const LABELS = { h1: 'hour', h12: '12 hours', h24: '24 hours' };
+    // Tier badge from a player's profit over the last 24 hours
+    const TIERS = [[100e6, 'Dragon', 'dragon'], [50e6, 'Rune', 'rune'], [10e6, 'Gold', 'gold'], [1e6, 'Silver', 'silver'], [-Infinity, 'Bronze', 'bronze']];
+    let data = null, win = 'h1';
+    let me = '';
+    try { me = localStorage.getItem('flip-me') || ''; } catch (e) {}
+
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const canon = s => String(s).replace(/[ _\-]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    function gp(n, sign = true) {
+        const a = Math.abs(n), s = n < 0 ? '-' : (sign ? '+' : '');
+        if (a >= 1e9) return s + (a / 1e9).toFixed(2) + 'B';
+        if (a >= 1e7) return s + (a / 1e6).toFixed(1) + 'M';
+        if (a >= 1e6) return s + (a / 1e6).toFixed(2) + 'M';
+        if (a >= 1e4) return s + (a / 1e3).toFixed(a >= 1e5 ? 0 : 1) + 'k';
+        return s + a.toLocaleString();
+    }
+    const et = t => new Date(t * 1000).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+
+    function tierOf(name) {
+        const day = data && data.windows.h24.current.find(p => canon(p.name) === canon(name));
+        const p = day ? day.profit : 0;
+        const t = TIERS.find(([min]) => p >= min);
+        return `<span class="pill t-${t[2]}">${t[1]}</span>`;
+    }
+
+    function list(el, rows, value, opts) {
+        if (!rows.length) {
+            el.innerHTML = `<div class="empty">No flips this ${LABELS[win]} yet.</div>`;
+            return;
+        }
+        const max = Math.max(...rows.map(r => Math.abs(value(r)))) || 1;
+        el.innerHTML = rows.map((r, i) => {
+            const v = value(r), isMe = me && canon(r.name) === canon(me);
+            const color = opts.color(v);
+            return `<div class="row${isMe ? ' you' : ''}">
+                <div class="rank r${i + 1}">#${i + 1}</div>
+                <div class="who">
+                    <div class="name"><strong>${esc(r.name)}</strong>${isMe ? '<span class="pill you">YOU</span>' : ''}${tierOf(r.name)}</div>
+                    ${opts.sub ? `<div class="item">${esc(opts.sub(r) || '')}</div>` : ''}
+                </div>
+                <div class="val">
+                    <div class="num ${opts.cls(v)}">${opts.fmt(v)}</div>
+                    <div class="bar"><i style="width:${Math.max(3, Math.round(Math.abs(v) / max * 100))}%;background:${color}"></i></div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function render() {
+        if (!data) return;
+        const w = data.windows[win];
+        const left = Math.max(0, w.end - Math.floor(Date.now() / 1000));
+        const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), s = left % 60;
+        document.getElementById('reset').innerHTML =
+            `This ${LABELS[win]} started ${et(w.start)} ET &middot; resets in <b>${h ? h + 'h ' : ''}${m}m ${String(s).padStart(2, '0')}s</b>`;
+
+        const cur = w.current.slice();
+        const green = 'var(--green)', red = 'var(--red)';
+        list(document.getElementById('profit'), cur.slice().sort((a, b) => b.profit - a.profit), r => r.profit,
+            { fmt: gp, cls: v => v >= 0 ? 'pos' : 'neg', color: v => v >= 0 ? green : red });
+        list(document.getElementById('flips'), cur.filter(r => r.flips > 0).sort((a, b) => b.flips - a.flips || b.profit - a.profit), r => r.flips,
+            { fmt: v => v.toLocaleString(), cls: () => 'flips', color: () => 'var(--blue)' });
+        list(document.getElementById('best'), cur.filter(r => r.best != null).sort((a, b) => b.best - a.best), r => r.best,
+            { fmt: gp, cls: v => v >= 0 ? 'pos' : 'neg', color: v => v >= 0 ? green : red, sub: r => r.bestItem });
+
+        const prev = w.previous && w.previous.slice().sort((a, b) => b.profit - a.profit)[0];
+        document.getElementById('previous').innerHTML = prev
+            ? `Last ${LABELS[win]} (${et(w.previousStart)} ET): <b>${esc(prev.name)}</b> won with ${gp(prev.profit)}` : '';
+
+        // "Highlight me" choices: everyone on the 24h board
+        const sel = document.getElementById('me');
+        const names = data.windows.h24.current.map(p => p.name).sort((a, b) => a.localeCompare(b));
+        const want = ['<option value="">Highlight me...</option>'].concat(names.map(n => `<option${canon(n) === canon(me) ? ' selected' : ''}>${esc(n)}</option>`)).join('');
+        if (sel.innerHTML !== want) sel.innerHTML = want;
+    }
+
+    async function load() {
+        try {
+            const r = await fetch(WORKER_URL + '/leaderboard', { cache: 'no-store' });
+            if (!r.ok) throw new Error(r.status);
+            data = await r.json();
+            document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            render();
+        } catch (e) {
+            document.getElementById('status').textContent = "Couldn't load the leaderboard. Retrying...";
+        }
+    }
+
+    document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+        win = b.dataset.win;
+        document.querySelectorAll('.seg button').forEach(t => t.setAttribute('aria-selected', t === b));
+        render();
+    }));
+    document.getElementById('me').addEventListener('change', e => {
+        me = e.target.value;
+        try { localStorage.setItem('flip-me', me); } catch (err) {}
+        render();
+    });
+
+    load();
+    setInterval(load, 60000);
+    setInterval(() => {
+        if (data && Math.floor(Date.now() / 1000) >= data.windows[win].end) load();
+        render();
+    }, 1000);
+</script>
+</body>
+</html>
