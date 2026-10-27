@@ -38,6 +38,7 @@ tasks.register('runClient', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
 	mainClass = 'com.flipledger.FlipLedgerPluginTest'
 	jvmArgs = ['-ea']
-	args = ['--developer-mode']
+	// --safe-mode skips your Plugin Hub plugins (and GPU) so only Flip Ledger and RuneLite's own plugins load
+	args = ['--developer-mode', '--safe-mode']
 }
 
