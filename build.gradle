@@ -42,3 +42,19 @@ tasks.register('runClient', JavaExec) {
 	args = ['--developer-mode', '--safe-mode']
 }
 
+
+// One file with RuneLite + Flip Ledger, for the "Flip Ledger RuneLite" shortcut (no IntelliJ needed).
+// Rebuild it (Gradle task "devJar") after changing the plugin.
+tasks.register('devJar', Jar) {
+	group = 'application'
+	description = 'Build build/libs/flip-ledger-runelite.jar for Launch RuneLite.bat'
+	archiveFileName = 'flip-ledger-runelite.jar'
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	zip64 = true
+	manifest { attributes 'Main-Class': 'com.flipledger.FlipLedgerPluginTest' }
+	from sourceSets.test.output
+	from sourceSets.main.output
+	from({ sourceSets.test.runtimeClasspath.filter { it.name.endsWith('.jar') }.collect { zipTree(it) } }) {
+		exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.EC', 'module-info.class'
+	}
+}
