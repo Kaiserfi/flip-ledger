@@ -83,6 +83,21 @@ final class PriceCheck
 				out.add(new PriceCheckOverlay.Line("Cost", "unknown", GRAY));
 			}
 			out.add(new PriceCheckOverlay.Line("Instant sale ~", String.format("%,d", seller), GRAY));
+			// Selling something that's worth more alched? Say so (cost basis if we know it, else the sale price)
+			PriceService.Item held = prices.mapping.get(id);
+			long runeCost = Alch.castCost(prices, true);
+			if (held != null && held.highAlch > 0 && runeCost > 0)
+			{
+				long alchNet = held.highAlch - runeCost;     // coins per cast after the nature rune
+				long sellNet = buyer - taxB;                  // what selling one gets you
+				if (alchNet > sellNet)
+				{
+					long each = avgCost > 0 ? alchNet - avgCost : alchNet - sellNet;
+					out.add(new PriceCheckOverlay.Line(avgCost > 0 ? "High Alch instead" : "Alch beats selling",
+						Gp.signed(each) + " each", GREEN));
+					out.add(new PriceCheckOverlay.Line("x " + String.format("%,d", n), Gp.signed(each * n), GREEN));
+				}
+			}
 		}
 
 		processLines(out, proc, id, sell ? (avgCost > 0 ? avgCost : -1) : seller, buyer - taxB, n, prices);
