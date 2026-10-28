@@ -48,6 +48,24 @@ public interface FlipLedgerConfig extends Config
 		return "";
 	}
 
+	@ConfigItem(keyName = "mode", name = "Mode", description = "Flip or Alch", hidden = true)
+	default String mode()
+	{
+		return "flip";
+	}
+
+	@ConfigItem(keyName = "alchGoal", name = "Alch goal", description = "\"bond\" for the live bond price, or an amount like 10m", hidden = true)
+	default String alchGoal()
+	{
+		return "bond";
+	}
+
+	@ConfigItem(keyName = "alchFireStaff", name = "Fire staff", description = "Alching with a fire staff (no fire runes)", hidden = true)
+	default boolean alchFireStaff()
+	{
+		return true;
+	}
+
 	// ---------- session ----------
 
 	@ConfigItem(keyName = "budget", name = "GP to use", description = "Total gp for suggested flips, e.g. 50m or 750k",

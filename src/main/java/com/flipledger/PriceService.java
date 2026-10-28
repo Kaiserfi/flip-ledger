@@ -41,6 +41,7 @@ class PriceService
 		String name;
 		boolean members;
 		int limit;
+		int highAlch;
 	}
 
 	static class Window
@@ -98,6 +99,7 @@ class PriceService
 					it.name = o.get("name").getAsString();
 					it.members = o.has("members") && o.get("members").getAsBoolean();
 					it.limit = o.has("limit") && !o.get("limit").isJsonNull() ? o.get("limit").getAsInt() : 0;
+					it.highAlch = o.has("highalch") && !o.get("highalch").isJsonNull() ? o.get("highalch").getAsInt() : 0;
 					m.put(it.id, it);
 				}
 				mapping = m;

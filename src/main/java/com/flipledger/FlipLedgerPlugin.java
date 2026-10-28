@@ -137,9 +137,28 @@ public class FlipLedgerPlugin extends Plugin
 		prices = new PriceService(okHttpClient, gson);
 		crew = new CrewLeaderboard(okHttpClient, gson);
 		recipes = new Recipes(gson);
+		alchTab = new AlchTab(config.alchGoal(), config.alchFireStaff(),
+			goal ->
+			{
+				configManager.setConfiguration(FlipLedgerConfig.GROUP, "alchGoal", goal.isEmpty() ? "bond" : goal);
+				refreshAlch();
+			},
+			staff ->
+			{
+				configManager.setConfiguration(FlipLedgerConfig.GROUP, "alchFireStaff", staff);
+				refreshAlch();
+			},
+			() ->
+			{
+				alchSessionStart = System.currentTimeMillis();
+				alchSessionCasts = 0;
+				alchSessionProfit = 0;
+				refreshAlch();
+			});
+		alchSessionStart = System.currentTimeMillis();
 		panel = new FlipLedgerPanel(configManager, config, this::recomputeSuggestions,
 			this::resetSessionFromPanel, this::clearHistoryFromPanel, this::manualRefresh, this::blockItem,
-			this::limitReached);
+			this::limitReached, alchTab);
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "icon.png");
 		navButton = NavigationButton.builder()
 			.tooltip("Flip Ledger")
@@ -475,6 +494,7 @@ public class FlipLedgerPlugin extends Plugin
 
 	private synchronized void recomputeSuggestions()
 	{
+		refreshAlch();
 		if (panel == null)
 		{
 			return;
@@ -580,10 +600,35 @@ public class FlipLedgerPlugin extends Plugin
 	/** Last inventory counts (noted and unnoted together), to spot grimy herbs turning into clean ones. */
 	private java.util.Map<Integer, Integer> lastInv;
 	private Recipes recipes;
+	private AlchTab alchTab;
+	private volatile long invCoins;
+	private volatile long alchSessionStart;
+	private volatile long alchSessionCasts;
+	private volatile long alchSessionProfit;
 
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged e)
 	{
+		if (e.getContainerId() == InventoryID.BANK && data != null && e.getItemContainer() != null)
+		{
+			// Remember bank coins for the Alch goal (only while the bank is open)
+			long coins = 0;
+			for (Item it : e.getItemContainer().getItems())
+			{
+				if (it.getId() == Alch.COINS)
+				{
+					coins += it.getQuantity();
+				}
+			}
+			if (coins != data.bankCoins)
+			{
+				data.bankCoins = coins;
+				data.bankSeenAt = System.currentTimeMillis();
+				save();
+			}
+			refreshAlch();
+			return;
+		}
 		if (e.getContainerId() != InventoryID.INV)
 		{
 			return;
@@ -602,6 +647,7 @@ public class FlipLedgerPlugin extends Plugin
 		}
 		java.util.Map<Integer, Integer> before = lastInv;
 		lastInv = now;
+		invCoins = now.getOrDefault(Alch.COINS, 0);
 		// Banking moves items in and out at once; cleaning never happens with the bank open
 		if (before == null || data == null || recipes == null || client.getWidget(InterfaceID.Bankmain.UNIVERSE) != null)
 		{
@@ -626,6 +672,13 @@ public class FlipLedgerPlugin extends Plugin
 				up.put(n.getKey(), u);
 			}
 		}
+		if (detectAlch(down, up))
+		{
+			save();
+			refreshPanel();
+			return;
+		}
+		refreshAlch();
 		if (down.isEmpty() || up.isEmpty())
 		{
 			return;
@@ -692,6 +745,76 @@ public class FlipLedgerPlugin extends Plugin
 			}
 		}
 		return best;
+	}
+
+	/**
+	 * High Alchemy: one item and a nature rune left the inventory and exactly the item's High Alch value in
+	 * coins arrived. Counts the cast and its profit (item cost from the GE if we know it, otherwise today's price).
+	 */
+	private boolean detectAlch(java.util.Map<Integer, Integer> down, java.util.Map<Integer, Integer> up)
+	{
+		Integer coins = up.get(Alch.COINS);
+		if (coins == null || down.getOrDefault(Alch.NATURE_RUNE, 0) != 1)
+		{
+			return false;
+		}
+		for (java.util.Map.Entry<Integer, Integer> d : down.entrySet())
+		{
+			int id = d.getKey();
+			if (id == Alch.NATURE_RUNE || id == Alch.FIRE_RUNE || d.getValue() != 1)
+			{
+				continue;
+			}
+			PriceService.Item it = prices.mapping.get(id);
+			if (it == null || it.highAlch != coins)
+			{
+				continue;
+			}
+			long[] untracked = new long[1];
+			long cost = data.consume(id, 1, untracked) + untracked[0] * Alch.buyPrice(prices, id);
+			cost += data.consume(Alch.NATURE_RUNE, 1, untracked) + untracked[0] * Alch.buyPrice(prices, Alch.NATURE_RUNE);
+			int fires = down.getOrDefault(Alch.FIRE_RUNE, 0);
+			if (fires > 0)
+			{
+				cost += data.consume(Alch.FIRE_RUNE, fires, untracked) + untracked[0] * Alch.buyPrice(prices, Alch.FIRE_RUNE);
+			}
+			long profit = coins - cost;
+			data.alchProfit += profit;
+			data.alchCasts++;
+			alchSessionProfit += profit;
+			alchSessionCasts++;
+			return true;
+		}
+		return false;
+	}
+
+	/** Rebuild the Alch page: goal progress, this session, the best items for this world type. */
+	private void refreshAlch()
+	{
+		AlchTab tab = alchTab;
+		if (tab == null || prices == null)
+		{
+			return;
+		}
+		AlchTab.View v = new AlchTab.View();
+		LedgerData d = data;
+		v.bondPrice = Alch.buyPrice(prices, Alch.BOND);
+		String g = config.alchGoal().trim();
+		v.goalIsBond = g.isEmpty() || g.equalsIgnoreCase("bond");
+		v.goal = v.goalIsBond ? (v.bondPrice > 0 ? v.bondPrice : 10_000_000L) : Math.max(1, Suggester.parse(g, 10_000_000L));
+		v.invCoins = invCoins;
+		v.bankCoins = d == null ? -1 : d.bankCoins;
+		v.bankSeenAt = d == null ? 0 : d.bankSeenAt;
+		v.casts = alchSessionCasts;
+		v.profit = alchSessionProfit;
+		v.sessionMs = System.currentTimeMillis() - alchSessionStart;
+		v.allTimeProfit = d == null ? 0 : d.alchProfit;
+		v.allTimeCasts = d == null ? 0 : d.alchCasts;
+		v.natureRune = Alch.buyPrice(prices, Alch.NATURE_RUNE);
+		v.members = membersWorld;
+		v.magicLevel = loggedIn ? client.getRealSkillLevel(Skill.MAGIC) : 0;
+		v.picks = Alch.best(prices, membersWorld, config.alchFireStaff(), this::boughtRecently, 10);
+		SwingUtilities.invokeLater(() -> tab.update(v));
 	}
 
 	/** What an input you didn't buy through the GE is worth: what it sells for right now. */
@@ -976,5 +1099,6 @@ public class FlipLedgerPlugin extends Plugin
 		final long elapsed = System.currentTimeMillis() - sessionStart;
 		final LedgerData snapshot = data;
 		SwingUtilities.invokeLater(() -> panel.update(profit, flips, elapsed, snapshot));
+		refreshAlch();
 	}
 }

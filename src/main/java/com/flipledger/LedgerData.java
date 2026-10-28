@@ -21,6 +21,12 @@ class LedgerData
 	long allTimeProfit;
 	int allTimeFlips;
 
+	/** Alching: all-time totals, and coins in the bank when it was last open (-1 = never seen). */
+	long alchProfit;
+	long alchCasts;
+	long bankCoins = -1;
+	long bankSeenAt;
+
 	/** Profit and completed-flip events from the last ~26 hours, for the crew leaderboard. */
 	List<Event> events = new ArrayList<>();
 
@@ -210,6 +216,44 @@ class LedgerData
 		of.boughtCost += total;
 		of.time = now;
 		moveToTop(of);
+	}
+
+	/**
+	 * Items used up (alched, for example). Returns what the tracked part cost; {@code untracked[0]} gets how many
+	 * had no GE cost (bought before the plugin, picked up...). The item's flip entry shrinks like with processing.
+	 */
+	synchronized long consume(int id, long qty, long[] untracked)
+	{
+		long cost = 0;
+		Position p = positions.get(id);
+		if (p != null && p.qty > 0 && qty > 0)
+		{
+			long moved = Math.min(qty, p.qty);
+			cost = p.totalCost * moved / p.qty;
+			p.qty -= moved;
+			p.totalCost -= cost;
+			if (p.qty <= 0)
+			{
+				positions.remove(id);
+			}
+			qty -= moved;
+			Flip f = openFlip(id);
+			if (f != null)
+			{
+				f.boughtQty -= moved;
+				f.boughtCost -= cost;
+				if (f.boughtQty <= 0 && f.qty <= 0)
+				{
+					history.remove(f);
+				}
+				else if (!positions.containsKey(id))
+				{
+					f.open = false;
+				}
+			}
+		}
+		untracked[0] = Math.max(0, qty);
+		return cost;
 	}
 
 	/** Newest activity first. One entry per flip: from the first buy until everything bought is sold. */

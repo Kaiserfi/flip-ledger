@@ -23,7 +23,7 @@ class FlipLedgerPanel extends PluginPanel
 
 	FlipLedgerPanel(ConfigManager configManager, FlipLedgerConfig config,
 		Runnable onSettingsChanged, Runnable onReset, Runnable onClear, Runnable onRefreshSuggestions,
-		java.util.function.IntConsumer onBlock, java.util.function.IntConsumer onLimit)
+		java.util.function.IntConsumer onBlock, java.util.function.IntConsumer onLimit, AlchTab alch)
 	{
 		super(false);
 		setLayout(new BorderLayout());
@@ -60,8 +60,39 @@ class FlipLedgerPanel extends PluginPanel
 		}
 		tabs.select(sessionTab);
 
-		add(tabs, BorderLayout.NORTH);
-		add(display, BorderLayout.CENTER);
+		// Flip mode: the four tabs. Alch mode: the alching page. Two buttons at the top swap between them.
+		JPanel flipMode = new JPanel(new BorderLayout());
+		flipMode.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		flipMode.add(tabs, BorderLayout.NORTH);
+		flipMode.add(display, BorderLayout.CENTER);
+
+		java.awt.CardLayout cards = new java.awt.CardLayout();
+		JPanel modes = new JPanel(cards);
+		modes.add(flipMode, "flip");
+		modes.add(scroll(alch), "alch");
+
+		JPanel switcher = new JPanel(new java.awt.GridLayout(1, 2, 4, 0));
+		switcher.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		switcher.setBorder(new EmptyBorder(6, 6, 0, 6));
+		javax.swing.JToggleButton flipBtn = new javax.swing.JToggleButton("Flip");
+		javax.swing.JToggleButton alchBtn = new javax.swing.JToggleButton("Alch");
+		javax.swing.ButtonGroup group = new javax.swing.ButtonGroup();
+		group.add(flipBtn);
+		group.add(alchBtn);
+		switcher.add(flipBtn);
+		switcher.add(alchBtn);
+		java.util.function.Consumer<String> show = m ->
+		{
+			cards.show(modes, m);
+			(m.equals("alch") ? alchBtn : flipBtn).setSelected(true);
+			configManager.setConfiguration(FlipLedgerConfig.GROUP, "mode", m);
+		};
+		flipBtn.addActionListener(e -> show.accept("flip"));
+		alchBtn.addActionListener(e -> show.accept("alch"));
+		show.accept("alch".equals(config.mode()) ? "alch" : "flip");
+
+		add(switcher, BorderLayout.NORTH);
+		add(modes, BorderLayout.CENTER);
 	}
 
 	private static JScrollPane scroll(JPanel content)

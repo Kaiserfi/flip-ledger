@@ -54,6 +54,13 @@ final class PriceCheck
 			out.add(new PriceCheckOverlay.Line("x " + String.format("%,d", n), Gp.signed(each * n), each > 0 ? GREEN : RED));
 			out.add(new PriceCheckOverlay.Line("Break-even", String.format("%,d", Suggester.breakEven(seller)), GRAY));
 			limitLines(out, prices, id, qty, lw);
+			PriceService.Item item = prices.mapping.get(id);
+			long runes = Alch.castCost(prices, true);
+			if (item != null && item.highAlch > 0 && runes > 0 && item.highAlch - seller - runes > 0)
+			{
+				long a = item.highAlch - seller - runes;
+				out.add(new PriceCheckOverlay.Line("High Alch each", Gp.signed(a), GREEN));
+			}
 		}
 		else
 		{
