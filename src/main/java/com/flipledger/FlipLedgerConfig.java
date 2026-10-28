@@ -189,6 +189,14 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "showAlchText", name = "Floating text on alch",
+		description = "Green +gp / red -gp above your character for each High Alch (profit after the item and runes)",
+		section = display, position = 2)
+	default boolean showAlchText()
+	{
+		return true;
+	}
+
 	@Range(min = 1, max = 10)
 	@ConfigItem(keyName = "floatingSeconds", name = "Floating text seconds", description = "How long the text stays on screen",
 		section = display, position = 2)

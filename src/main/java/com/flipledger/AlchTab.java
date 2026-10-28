@@ -47,6 +47,8 @@ class AlchTab extends JPanel
 		boolean members;
 		int magicLevel;
 		List<Alch.Pick> picks = Collections.emptyList();
+		String lastName;    // null until the first cast
+		long lastCoins, lastItemCost, lastRuneCost, lastProfit;
 	}
 
 	private final Consumer<String> onGoal;
@@ -59,6 +61,8 @@ class AlchTab extends JPanel
 	private double goalFrac;
 	private final JLabel casts = value(), profit = value(), perHour = value(), allTime = value();
 	private final JLabel runeText = new JLabel();
+	private final JLabel lastTitle = new JLabel("Last cast");
+	private final JPanel last = column();
 	private final JLabel magicWarn = new JLabel();
 	private final JLabel picksTitle = new JLabel("Best items to alch");
 	private final JPanel picks = column();
@@ -143,6 +147,13 @@ class AlchTab extends JPanel
 		add(Box.createVerticalStrut(4));
 		add(reset);
 
+		lastTitle.setForeground(Color.WHITE);
+		lastTitle.setFont(FontManager.getRunescapeBoldFont());
+		lastTitle.setBorder(new EmptyBorder(12, 0, 4, 0));
+		lastTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+		add(lastTitle);
+		add(last);
+
 		heading("Runes");
 		runeText.setForeground(Color.LIGHT_GRAY);
 		runeText.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -193,6 +204,24 @@ class AlchTab extends JPanel
 		perHour.setForeground(Gp.color(ph));
 		allTime.setText(Gp.shortGp(v.allTimeProfit));
 		allTime.setForeground(Gp.color(v.allTimeProfit));
+
+		last.removeAll();
+		if (v.lastName == null)
+		{
+			JLabel l = new JLabel("No casts yet this session");
+			l.setForeground(Color.GRAY);
+			l.setAlignmentX(Component.LEFT_ALIGNMENT);
+			last.add(l);
+			lastTitle.setText("Last cast");
+		}
+		else
+		{
+			lastTitle.setText("Last cast  " + Gp.signed(v.lastProfit));
+			last.add(lastRow("Coins", v.lastCoins));
+			last.add(lastRow(v.lastName, -v.lastItemCost));
+			last.add(lastRow("Runes", -v.lastRuneCost));
+		}
+		last.revalidate();
 
 		runeText.setText(v.natureRune > 0 ? "Nature rune: " + String.format("%,d", v.natureRune) + " gp" : "Nature rune: loading...");
 		magicWarn.setText(v.magicLevel > 0 && v.magicLevel < Alch.MAGIC_LEVEL
@@ -254,6 +283,22 @@ class AlchTab extends JPanel
 				+ "<br>%,d trade an hour</html>", p.name.replace("<", "&lt;"), p.buy, p.highAlch, Gp.signed(p.profit),
 			Gp.shortGp(p.perLimit), p.volume));
 		return row;
+	}
+
+	private static JPanel lastRow(String label, long amount)
+	{
+		JPanel r = new JPanel(new BorderLayout(4, 0));
+		r.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		r.setBorder(new EmptyBorder(2, 6, 2, 6));
+		r.setAlignmentX(Component.LEFT_ALIGNMENT);
+		r.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+		JLabel l = new JLabel(label); // plain label: long names end in "..."
+		l.setForeground(Color.LIGHT_GRAY);
+		JLabel a = new JLabel(Gp.signed(amount));
+		a.setForeground(Gp.color(amount));
+		r.add(l, BorderLayout.CENTER);
+		r.add(a, BorderLayout.EAST);
+		return r;
 	}
 
 	private void heading(String text)

@@ -76,7 +76,7 @@ class FloatingTextOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D g)
 	{
-		if (entries.isEmpty() || !config.showFloatingText())
+		if (entries.isEmpty())
 		{
 			return null;
 		}

@@ -606,6 +606,8 @@ public class FlipLedgerPlugin extends Plugin
 	private volatile long alchSessionStart;
 	private volatile long alchSessionCasts;
 	private volatile long alchSessionProfit;
+	/** Last High Alch: {itemId, coins, item cost, rune cost, profit}, or null. */
+	private volatile long[] lastAlch;
 
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged e)
@@ -772,7 +774,8 @@ public class FlipLedgerPlugin extends Plugin
 				continue;
 			}
 			long[] untracked = new long[1];
-			long cost = data.consume(id, 1, untracked) + untracked[0] * Alch.buyPrice(prices, id);
+			long itemCost = data.consume(id, 1, untracked) + untracked[0] * Alch.buyPrice(prices, id);
+			long cost = itemCost;
 			cost += data.consume(Alch.NATURE_RUNE, 1, untracked) + untracked[0] * Alch.buyPrice(prices, Alch.NATURE_RUNE);
 			int fires = down.getOrDefault(Alch.FIRE_RUNE, 0);
 			if (fires > 0)
@@ -784,6 +787,11 @@ public class FlipLedgerPlugin extends Plugin
 			data.alchCasts++;
 			alchSessionProfit += profit;
 			alchSessionCasts++;
+			lastAlch = new long[]{id, coins, itemCost, cost - itemCost, profit};
+			if (config.showAlchText())
+			{
+				floatingText.show(-id, profit); // negative id: alch popups never merge with sale popups
+			}
 			return true;
 		}
 		return false;
@@ -814,6 +822,16 @@ public class FlipLedgerPlugin extends Plugin
 		v.natureRune = Alch.buyPrice(prices, Alch.NATURE_RUNE);
 		v.members = membersWorld;
 		v.magicLevel = loggedIn ? client.getRealSkillLevel(Skill.MAGIC) : 0;
+		long[] la = lastAlch;
+		if (la != null)
+		{
+			PriceService.Item li = prices.mapping.get((int) la[0]);
+			v.lastName = li == null ? "Item" : li.name;
+			v.lastCoins = la[1];
+			v.lastItemCost = la[2];
+			v.lastRuneCost = la[3];
+			v.lastProfit = la[4];
+		}
 		v.picks = Alch.best(prices, membersWorld, config.alchFireStaff(), this::boughtRecently, 10);
 		SwingUtilities.invokeLater(() -> tab.update(v));
 	}
