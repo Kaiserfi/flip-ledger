@@ -138,7 +138,8 @@ public class FlipLedgerPlugin extends Plugin
 		crew = new CrewLeaderboard(okHttpClient, gson);
 		recipes = new Recipes(gson);
 		panel = new FlipLedgerPanel(configManager, config, this::recomputeSuggestions,
-			this::resetSessionFromPanel, this::clearHistoryFromPanel, this::manualRefresh, this::blockItem);
+			this::resetSessionFromPanel, this::clearHistoryFromPanel, this::manualRefresh, this::blockItem,
+			this::limitReached);
 		BufferedImage icon = ImageUtil.loadImageResource(getClass(), "icon.png");
 		navButton = NavigationButton.builder()
 			.tooltip("Flip Ledger")
@@ -451,6 +452,25 @@ public class FlipLedgerPlugin extends Plugin
 		String cur = config.blockedItems().trim();
 		String next = cur.isEmpty() ? String.valueOf(itemId) : cur + "," + itemId;
 		configManager.setConfiguration(FlipLedgerConfig.GROUP, "blockedItems", next);
+	}
+
+	/** "At buy limit" on a suggestion: count the limit as used up for this 4-hour window. */
+	private void limitReached(int itemId)
+	{
+		// Change saved data on the game thread, like every other update
+		clientThread.invokeLater(() ->
+		{
+			LedgerData d = data;
+			if (d == null)
+			{
+				return;
+			}
+			PriceService.Item it = prices.mapping.get(itemId);
+			d.markLimitReached(itemId, System.currentTimeMillis(), it == null ? "Item" : it.name, it == null ? 0 : it.limit);
+			save();
+			refreshPanel();
+			recomputeSuggestions();
+		});
 	}
 
 	private synchronized void recomputeSuggestions()

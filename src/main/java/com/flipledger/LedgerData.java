@@ -95,6 +95,31 @@ class LedgerData
 		}
 	}
 
+	/**
+	 * You told us you're at the buy limit (e.g. you bought it outside the plugin). Treat the limit as used up;
+	 * an existing window keeps its reset time, otherwise we assume the full 4 hours from now.
+	 */
+	synchronized void markLimitReached(int itemId, long now, String name, int limit)
+	{
+		if (limits == null)
+		{
+			limits = new HashMap<>();
+		}
+		LimitWindow w = limits.get(itemId);
+		if (w == null || now >= w.start + LIMIT_WINDOW_MS)
+		{
+			w = new LimitWindow();
+			w.start = now;
+			limits.put(itemId, w);
+		}
+		w.name = name;
+		if (limit > 0)
+		{
+			w.limit = limit;
+		}
+		w.bought = Math.max(w.bought, Math.max(1, w.limit));
+	}
+
 	/** The item's current window, or null if nothing was bought in the last 4 hours. */
 	synchronized LimitWindow limitWindow(int itemId, long now)
 	{

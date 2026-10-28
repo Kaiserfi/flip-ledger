@@ -54,11 +54,13 @@ class SessionTab extends JPanel
 	private List<Suggester.Suggestion> lastSuggestions = Collections.emptyList();
 	private final Map<Integer, Long> skipped = new HashMap<>();
 	private final IntConsumer onBlock;
+	private final IntConsumer onLimit;
 	private LedgerData lastData;
 
-	SessionTab(Runnable onReset, Runnable onClear, Runnable onRefreshSuggestions, IntConsumer onBlock)
+	SessionTab(Runnable onReset, Runnable onClear, Runnable onRefreshSuggestions, IntConsumer onBlock, IntConsumer onLimit)
 	{
 		this.onBlock = onBlock;
+		this.onLimit = onLimit;
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
@@ -613,6 +615,20 @@ class SessionTab extends JPanel
 			actions.add(skip);
 			actions.add(block);
 			suggestions.add(actions);
+
+			JButton limit = new JButton("At buy limit");
+			limit.setToolTipText("You've already hit this item's 4-hour buy limit (for example, bought outside the plugin). "
+				+ "Hides it until the limit resets, shown on the Offers tab.");
+			limit.setAlignmentX(Component.LEFT_ALIGNMENT);
+			limit.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+			limit.addActionListener(e ->
+			{
+				skipped.put(s.id, System.currentTimeMillis()); // hide straight away
+				onLimit.accept(s.id);
+				renderSuggestion();
+			});
+			suggestions.add(Box.createVerticalStrut(4));
+			suggestions.add(limit);
 
 			JLabel hint = new JLabel(String.format("<html><body style='width:150px'>%d of %d. Place the buy yourself; this moves on once it's in the GE.</body></html>",
 				1, left.size()));

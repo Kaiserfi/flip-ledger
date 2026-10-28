@@ -23,7 +23,7 @@ class FlipLedgerPanel extends PluginPanel
 
 	FlipLedgerPanel(ConfigManager configManager, FlipLedgerConfig config,
 		Runnable onSettingsChanged, Runnable onReset, Runnable onClear, Runnable onRefreshSuggestions,
-		java.util.function.IntConsumer onBlock)
+		java.util.function.IntConsumer onBlock, java.util.function.IntConsumer onLimit)
 	{
 		super(false);
 		setLayout(new BorderLayout());
@@ -31,7 +31,7 @@ class FlipLedgerPanel extends PluginPanel
 
 		settings = new SettingsTab(configManager, config, onSettingsChanged);
 		InfoTab info = new InfoTab();
-		session = new SessionTab(onReset, onClear, onRefreshSuggestions, onBlock);
+		session = new SessionTab(onReset, onClear, onRefreshSuggestions, onBlock, onLimit);
 
 		JPanel display = new JPanel(new BorderLayout());
 		display.setBackground(ColorScheme.DARK_GRAY_COLOR);
