@@ -89,6 +89,7 @@ class SettingsTab extends JPanel
 		check("Price drop alerts", "crashAlerts", config.crashAlerts());
 		check("Floating text on player", "showFloatingText", config.showFloatingText());
 		check("Floating text on alch", "showAlchText", config.showAlchText());
+		check("Coin pile on profit popups", "coinIcon", config.coinIcon());
 		check("Floating text on GE offers", "showOnGeSlots", config.showOnGeSlots());
 		check("Chat message per sale", "showChatMessage", config.showChatMessage());
 		check("Subtract 2% GE tax", "applyTax", config.applyTax());

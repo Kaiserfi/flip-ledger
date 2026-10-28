@@ -12,6 +12,7 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -27,6 +28,7 @@ class FloatingTextOverlay extends Overlay
 
 	private final Client client;
 	private final FlipLedgerConfig config;
+	private final ItemManager itemManager;
 	private final List<Entry> entries = new CopyOnWriteArrayList<>();
 
 	private static class Entry
@@ -44,10 +46,11 @@ class FloatingTextOverlay extends Overlay
 	}
 
 	@Inject
-	FloatingTextOverlay(Client client, FlipLedgerConfig config)
+	FloatingTextOverlay(Client client, FlipLedgerConfig config, ItemManager itemManager)
 	{
 		this.client = client;
 		this.config = config;
+		this.itemManager = itemManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
@@ -118,6 +121,11 @@ class FloatingTextOverlay extends Overlay
 			Composite old = g.getComposite();
 			g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
+			if (e.amount > 0 && config.coinIcon())
+			{
+				// The in-game coin pile, left of the text (its size follows the amount, like a coin stack)
+				Coins.draw(g, itemManager, e.amount, x, y, font.getSize());
+			}
 			g.setColor(Color.BLACK);
 			g.drawString(text, x + 1, y + 1);
 			g.setColor(Gp.color(e.amount));

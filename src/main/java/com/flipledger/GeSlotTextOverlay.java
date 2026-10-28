@@ -14,6 +14,7 @@ import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -33,6 +34,7 @@ class GeSlotTextOverlay extends Overlay
 	private static final int RISE_PIXELS = 40;
 
 	private final Client client;
+	private final ItemManager itemManager;
 	private final FlipLedgerConfig config;
 	private final List<Entry> entries = new CopyOnWriteArrayList<>();
 
@@ -60,10 +62,11 @@ class GeSlotTextOverlay extends Overlay
 	}
 
 	@Inject
-	GeSlotTextOverlay(Client client, FlipLedgerConfig config)
+	GeSlotTextOverlay(Client client, FlipLedgerConfig config, ItemManager itemManager)
 	{
 		this.client = client;
 		this.config = config;
+		this.itemManager = itemManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 	}
@@ -153,6 +156,10 @@ class GeSlotTextOverlay extends Overlay
 			float alpha = progress < 0.6f ? 1f : Math.max(0f, 1f - (progress - 0.6f) / 0.4f);
 			Composite old = g.getComposite();
 			g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+			if (e.kind == Kind.PROFIT && e.amount > 0 && config.coinIcon())
+			{
+				Coins.draw(g, itemManager, e.amount, x, y, font.getSize());
+			}
 			g.setColor(Color.BLACK);
 			g.drawString(s, x + 1, y + 1);
 			g.setColor(color(e));

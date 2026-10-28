@@ -197,6 +197,14 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "coinIcon", name = "Coin pile on profit popups",
+		description = "Show the in-game coin pile next to green profit popups (bigger profit, bigger pile)",
+		section = display, position = 3)
+	default boolean coinIcon()
+	{
+		return true;
+	}
+
 	@Range(min = 1, max = 10)
 	@ConfigItem(keyName = "floatingSeconds", name = "Floating text seconds", description = "How long the text stays on screen",
 		section = display, position = 2)
