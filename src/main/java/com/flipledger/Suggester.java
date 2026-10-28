@@ -79,8 +79,13 @@ class Suggester
 
 			long buy = h.low;
 			long sell = h.high;
-			// Use the most cautious sell price we know: a brief spike in the hour average shouldn't make a margin
+			// Use the most cautious prices we know. Buy: if sellers want more in the last 5 minutes than the hour
+			// average, an old cheap price won't fill. Sell: a brief spike in the hour average shouldn't make a margin.
 			PriceService.Window f5 = prices.fiveMin.get(it.id);
+			if (f5 != null && f5.low > 0)
+			{
+				buy = Math.max(buy, f5.low);
+			}
 			if (f5 != null && f5.high > 0)
 			{
 				sell = Math.min(sell, f5.high);
