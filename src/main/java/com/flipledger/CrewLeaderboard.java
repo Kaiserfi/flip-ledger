@@ -92,6 +92,7 @@ class CrewLeaderboard
 			long profit = 0;
 			int flips = 0;
 			LedgerData.Event best = null;
+			LedgerData.Event worst = null; // biggest losing flip, if any
 			for (LedgerData.Event e : events)
 			{
 				if (e.t >= start)
@@ -101,6 +102,10 @@ class CrewLeaderboard
 					if (e.flips > 0 && e.item != null && (best == null || e.flipTotal > best.flipTotal))
 					{
 						best = e;
+					}
+					if (e.flips > 0 && e.item != null && e.flipTotal < 0 && (worst == null || e.flipTotal < worst.flipTotal))
+					{
+						worst = e;
 					}
 				}
 			}
@@ -112,6 +117,11 @@ class CrewLeaderboard
 			{
 				w.put("best", best.flipTotal);
 				w.put("bestItem", best.item);
+			}
+			if (worst != null)
+			{
+				w.put("worst", worst.flipTotal);
+				w.put("worstItem", worst.item);
 			}
 			windows.put(WINDOW_KEYS[i], w);
 		}

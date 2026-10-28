@@ -55,8 +55,8 @@ async function ensureTable(env) {
        PRIMARY KEY (name, win, start)
      )`
   ).run();
-  // Columns added later for "best single flip"; ignore the error if they already exist
-  for (const col of ["best INTEGER", "best_item TEXT"]) {
+  // Columns added later for "best single flip" and "biggest loss"; ignore the error if they already exist
+  for (const col of ["best INTEGER", "best_item TEXT", "worst INTEGER", "worst_item TEXT"]) {
     try { await env.DB.prepare(`ALTER TABLE scores ADD COLUMN ${col}`).run(); } catch {}
   }
   tableReady = true;
@@ -128,11 +128,14 @@ async function submit(request, env) {
     let best = w.best == null ? null : Math.trunc(Number(w.best));
     if (best != null && (!Number.isFinite(best) || Math.abs(best) > MAX_ABS_PROFIT)) best = null;
     const bestItem = best == null ? null : String(w.bestItem || "").replace(/[^\w '()+\-.,]/g, "").slice(0, 40) || null;
+    let worst = w.worst == null ? null : Math.trunc(Number(w.worst));
+    if (worst != null && (!Number.isFinite(worst) || worst >= 0 || Math.abs(worst) > MAX_ABS_PROFIT)) worst = null;
+    const worstItem = worst == null ? null : String(w.worstItem || "").replace(/[^\w '()+\-.,]/g, "").slice(0, 40) || null;
     stmts.push(env.DB.prepare(
-      `INSERT INTO scores (name, win, start, profit, flips, updated, best, best_item) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO scores (name, win, start, profit, flips, updated, best, best_item, worst, worst_item) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(name, win, start) DO UPDATE SET profit = excluded.profit, flips = excluded.flips, updated = excluded.updated,
-         best = excluded.best, best_item = excluded.best_item`
-    ).bind(name, win, start, profit, flips, now, best, bestItem));
+         best = excluded.best, best_item = excluded.best_item, worst = excluded.worst, worst_item = excluded.worst_item`
+    ).bind(name, win, start, profit, flips, now, best, bestItem, worst, worstItem));
   }
   if (stmts.length) await env.DB.batch(stmts);
 
@@ -148,7 +151,7 @@ async function leaderboard(env) {
     const start = windowStart(hours, now);
     const prevStart = windowStart(hours, start - 1);
     const rows = async s => (await env.DB.prepare(
-      "SELECT name, profit, flips, updated, best, best_item AS bestItem FROM scores WHERE win = ? AND start = ? ORDER BY profit DESC LIMIT 50"
+      "SELECT name, profit, flips, updated, best, best_item AS bestItem, worst, worst_item AS worstItem FROM scores WHERE win = ? AND start = ? ORDER BY profit DESC LIMIT 50"
     ).bind(win, s).all()).results;
     out.windows[win] = {
       start, end: start + hours * 3600,

@@ -5,153 +5,165 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flipping Leaderboard</title>
     <style>
-        :root {
-            --bg: #0a0d12;
-            --card: #121820;
-            --card-2: #0f141b;
-            --line: #1f2833;
-            --text: #e6edf3;
-            --muted: #8b97a6;
-            --dim: #5d6876;
-            --green: #3ddc84;
-            --green-soft: rgba(61, 220, 132, 0.12);
-            --blue: #4fb3ff;
-            --blue-soft: rgba(79, 179, 255, 0.12);
-            --gold: #f2b134;
-            --gold-soft: rgba(242, 177, 52, 0.12);
-            --red: #ff5f5f;
-            --silver: #c3cad3;
-            --bronze: #d98a4e;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px 16px;
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 50%, #0a0a0a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            box-sizing: border-box;
         }
         * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 36px 16px 48px;
-            background: radial-gradient(1200px 600px at 50% -200px, #16202c 0%, var(--bg) 60%);
-            color: var(--text);
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            min-height: 100vh;
-        }
-        .wrap { max-width: 1140px; margin: 0 auto; }
 
-        header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; margin-bottom: 22px; }
-        h1 { margin: 0; font-size: 1.9rem; letter-spacing: -0.02em; }
-        h1 span { color: var(--green); }
-        .sub { color: var(--muted); margin: 4px 0 0; font-size: 0.92rem; }
-        .sub a { color: var(--muted); }
-        .sub a:hover { color: var(--text); }
+        .content-box {
+            background: linear-gradient(145deg, #1a1a1a, #111111);
+            padding: 36px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #5a0000;
+            box-shadow: 0 8px 20px rgba(139, 0, 0, 0.4), inset 0 0 15px rgba(255, 51, 51, 0.05);
+            max-width: 1440px;
+            width: 100%;
+        }
 
-        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
-        .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
-        .seg button {
-            border: 0; background: none; color: var(--muted); font: inherit; font-size: 0.88rem;
-            padding: 7px 14px; border-radius: 7px; cursor: pointer;
+        h1 {
+            margin: 0 0 5px;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            background: linear-gradient(to right, #8b0000, #ff1a1a, #8b0000);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.8));
         }
-        .seg button:hover { color: var(--text); }
-        .seg button[aria-selected="true"] { background: #1c2632; color: var(--text); box-shadow: inset 0 0 0 1px #2a3644; }
-        select {
-            background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
-            padding: 7px 10px; font: inherit; font-size: 0.85rem;
-        }
-        .reset { color: var(--muted); font-size: 0.85rem; }
-        .reset b { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+        .subtitle { color: #b3b3b3; margin: 0 0 12px; }
+        .nav { margin: 0 0 22px; font-size: 0.85rem; }
+        .nav a { color: #ff3333; text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
 
-        .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .card {
-            background: linear-gradient(180deg, var(--card), var(--card-2));
-            border: 1px solid var(--line); border-radius: 16px; padding: 18px 16px 12px;
+        .controls { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .tab, select {
+            background: #151515; color: #e0e0e0; border: 1px solid #5a0000; border-radius: 4px;
+            padding: 7px 14px; font: inherit; font-size: 0.9rem; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
         }
-        .card h2 {
-            display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 0 4px 14px;
-            font-size: 1rem; font-weight: 650; border-bottom: 1px solid var(--line);
+        .tab:hover, select:hover { border-color: #ff3333; }
+        .tab[aria-selected="true"] {
+            background: linear-gradient(145deg, #5a0000, #2a0a0a);
+            border-color: #ff1a1a;
+            box-shadow: 0 0 8px rgba(255, 26, 26, 0.35);
         }
-        .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex: none; }
-        .ico svg { width: 18px; height: 18px; }
-        .ico.green { background: var(--green-soft); color: var(--green); }
-        .ico.blue { background: var(--blue-soft); color: var(--blue); }
-        .ico.gold { background: var(--gold-soft); color: var(--gold); }
+        .reset { color: #b3b3b3; font-size: 0.9rem; margin-bottom: 4px; }
+        .reset b { color: #fff; font-variant-numeric: tabular-nums; }
+        .status { font-size: 0.8rem; color: #777; min-height: 1.2em; margin-bottom: 18px; }
+
+        .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; text-align: left; }
+        .board { border: 1px solid #330000; border-radius: 6px; overflow: hidden; background: #151515; }
+        .board-title {
+            display: flex; align-items: center; gap: 10px;
+            background: #0d0d0d; border-bottom: 1px solid #330000;
+            padding: 12px 16px; font-size: 0.85rem; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 1.5px; color: #ff3333;
+        }
+        .board-title svg { width: 18px; height: 18px; flex: none; }
 
         .row {
-            display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px;
-            padding: 11px 10px; border-radius: 12px; border: 1px solid transparent; margin-bottom: 4px;
+            display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+            padding: 11px 14px; border-bottom: 1px solid #221010; transition: background 0.2s;
         }
-        .row.you { background: rgba(61, 220, 132, 0.06); border-color: rgba(61, 220, 132, 0.35); }
-        .rank { font-weight: 700; font-size: 0.95rem; color: var(--dim); font-variant-numeric: tabular-nums; }
-        .rank.r1 { color: var(--gold); }
-        .rank.r2 { color: var(--silver); }
-        .rank.r3 { color: var(--bronze); }
+        .row:last-child { border-bottom: none; }
+        .row:hover { background: #1f1212; }
+        .row.you { background: linear-gradient(90deg, #2a0a0a, #151515); box-shadow: inset 3px 0 0 #ff1a1a; }
+
+        .rank { font-weight: bold; font-size: 1.05rem; color: #777; text-align: center; }
+        .medal {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%; font-size: 0.9rem; color: #111;
+        }
+        .medal.gold   { background: radial-gradient(circle at 35% 35%, #fff3b0, #d4a017 60%, #8a6500); }
+        .medal.silver { background: radial-gradient(circle at 35% 35%, #ffffff, #b8b8b8 60%, #6e6e6e); }
+        .medal.bronze { background: radial-gradient(circle at 35% 35%, #ffd2a6, #b8733a 60%, #6b3d17); }
+
         .who { min-width: 0; }
-        .name { display: flex; align-items: center; gap: 7px; min-width: 0; }
-        .name strong { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .pill { font-size: 0.68rem; font-weight: 650; padding: 2px 7px; border-radius: 5px; flex: none; letter-spacing: 0.02em; }
-        .pill.you { background: var(--green-soft); color: var(--green); }
-        .pill.t-bronze { background: rgba(217, 138, 78, 0.14); color: var(--bronze); }
-        .pill.t-silver { background: rgba(195, 202, 211, 0.12); color: var(--silver); }
-        .pill.t-gold { background: var(--gold-soft); color: var(--gold); }
-        .pill.t-rune { background: rgba(79, 179, 255, 0.14); color: var(--blue); }
-        .pill.t-dragon { background: rgba(255, 95, 95, 0.14); color: var(--red); }
-        .item { color: var(--muted); font-size: 0.8rem; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .val { text-align: right; min-width: 84px; }
-        .num { font-weight: 700; font-variant-numeric: tabular-nums; }
-        .num.pos { color: var(--green); }
-        .num.neg { color: var(--red); }
-        .num.flips { color: var(--text); }
-        .bar { height: 4px; border-radius: 3px; background: #1e2833; margin-top: 7px; overflow: hidden; }
-        .bar i { display: block; height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-        .empty { color: var(--dim); font-size: 0.88rem; padding: 18px 10px; }
+        .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .name strong { color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pill {
+            font-size: 0.62rem; font-weight: bold; padding: 2px 6px; border-radius: 3px; flex: none;
+            text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid;
+        }
+        .pill.you { color: #ff3333; border-color: #ff1a1a; background: #2a0a0a; }
+        .pill.t-bronze  { color: #d29a6a; border-color: #6b3d17; background: #1d140d; }
+        .pill.t-iron    { color: #b5b0aa; border-color: #5a5550; background: #191817; }
+        .pill.t-steel   { color: #c9d3dc; border-color: #6f7a85; background: #161a1e; }
+        .pill.t-black   { color: #9a9a9a; border-color: #444; background: #050505; }
+        .pill.t-mithril { color: #8f9fe8; border-color: #3b4785; background: #12152a; }
+        .pill.t-adamant { color: #7fc97f; border-color: #2f6b2f; background: #0f1d0f; }
+        .pill.t-rune    { color: #5fc9d6; border-color: #22606a; background: #0f1b1d; }
+        .pill.t-dragon  { color: #ff4d4d; border-color: #8b0000; background: #2a0a0a; }
+        .item { color: #8b5555; font-size: 0.75rem; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .foot { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; color: var(--dim); font-size: 0.8rem; }
-        .foot b { color: var(--gold); font-weight: 600; }
+        .val { text-align: right; min-width: 78px; }
+        .num { font-weight: bold; font-size: 1.05rem; font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(255, 51, 51, 0.25); }
+        .num.pos { color: #2ecc71; }
+        .num.neg { color: #ff4d4d; }
+        .num.flips { color: #e0e0e0; }
+        .bar { height: 4px; background: #2a1515; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #8b0000, #ff1a1a); transition: width 0.5s ease; }
+        .bar i.neg { background: linear-gradient(90deg, #3a3a3a, #777); }
+        .empty { color: #666; font-style: italic; font-size: 0.9rem; padding: 18px 16px; }
 
-        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .previous { margin-top: 18px; color: #888; font-size: 0.85rem; }
+        .previous b { color: #d4a017; }
+
+        @media (max-width: 1240px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
         @media (max-width: 520px) {
-            h1 { font-size: 1.5rem; }
-            .seg button { padding: 7px 10px; }
-            .card { padding: 14px 10px 8px; }
-            .row { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 8px; padding: 10px 8px; }
-            .val { min-width: 64px; }
-            .pill { padding: 2px 5px; }
+            .content-box { padding: 24px 12px; }
+            h1 { font-size: 1.7rem; letter-spacing: 2px; }
+            .row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 10px; }
+            .val { min-width: 62px; }
         }
     </style>
 </head>
 <body>
-<div class="wrap">
-    <header>
-        <div>
-            <h1>Flipping <span>Leaderboard</span></h1>
-            <p class="sub">LaidBackCrew Grand Exchange profit from Flip Ledger &middot; <a href="index.html">Skills leaderboard</a></p>
-        </div>
-        <div class="controls">
-            <div class="seg" role="tablist" aria-label="Time window">
-                <button role="tab" data-win="h1" aria-selected="true">1 hour</button>
-                <button role="tab" data-win="h12" aria-selected="false">12 hours</button>
-                <button role="tab" data-win="h24" aria-selected="false">24 hours</button>
-            </div>
-            <select id="me" aria-label="Highlight me"><option value="">Highlight me...</option></select>
-        </div>
-    </header>
+<div class="content-box">
+    <h1>Flipping Leaderboard</h1>
+    <p class="subtitle">LaidBackCrew Grand Exchange profit (Flip Ledger)</p>
+    <div class="nav"><a href="index.html">&larr; Skills leaderboard</a></div>
 
-    <div class="reset" id="reset" style="margin:-8px 0 18px"></div>
+    <div class="controls" role="tablist" aria-label="Time window">
+        <button class="tab" role="tab" data-win="h1" aria-selected="true">1 hour</button>
+        <button class="tab" role="tab" data-win="h12" aria-selected="false">12 hours</button>
+        <button class="tab" role="tab" data-win="h24" aria-selected="false">24 hours</button>
+        <select id="me" aria-label="Highlight me"><option value="">Highlight me...</option></select>
+    </div>
+    <div class="reset" id="reset"></div>
+    <div class="status" id="status">Loading...</div>
 
     <div class="grid">
-        <section class="card">
-            <h2><span class="ico green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Top profit</h2>
+        <section class="board">
+            <div class="board-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Top profit</div>
             <div id="profit"></div>
         </section>
-        <section class="card">
-            <h2><span class="ico blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>Most flips</h2>
+        <section class="board">
+            <div class="board-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>Most flips</div>
             <div id="flips"></div>
         </section>
-        <section class="card">
-            <h2><span class="ico gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></span>Best single flip</h2>
+        <section class="board">
+            <div class="board-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Best single flip</div>
             <div id="best"></div>
+        </section>
+        <section class="board">
+            <div class="board-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/></svg>Biggest loss</div>
+            <div id="worst"></div>
         </section>
     </div>
 
-    <div class="foot">
-        <span id="previous"></span>
-        <span id="status">Loading...</span>
-    </div>
+    <div class="previous" id="previous"></div>
 </div>
 
 <script>
@@ -160,8 +172,9 @@
     // =================================================================
 
     const LABELS = { h1: 'hour', h12: '12 hours', h24: '24 hours' };
-    // Tier badge from a player's profit over the last 24 hours
-    const TIERS = [[100e6, 'Dragon', 'dragon'], [50e6, 'Rune', 'rune'], [10e6, 'Gold', 'gold'], [1e6, 'Silver', 'silver'], [-Infinity, 'Bronze', 'bronze']];
+    // Tier badge from a player's profit over the last 24 hours (no badge until they're in profit)
+    const TIERS = [[50e6, 'Dragon'], [30e6, 'Rune'], [20e6, 'Adamant'], [15e6, 'Mithril'], [10e6, 'Black'],
+        [7.5e6, 'Steel'], [5e6, 'Iron'], [1, 'Bronze']];
     let data = null, win = 'h1';
     let me = '';
     try { me = localStorage.getItem('flip-me') || ''; } catch (e) {}
@@ -182,12 +195,15 @@
         const day = data && data.windows.h24.current.find(p => canon(p.name) === canon(name));
         const p = day ? day.profit : 0;
         const t = TIERS.find(([min]) => p >= min);
-        return `<span class="pill t-${t[2]}">${t[1]}</span>`;
+        if (!t) return '';
+        const next = TIERS[TIERS.indexOf(t) - 1];
+        const tip = `${t[1]} flipper: ${gp(p)} in the last 24 hours` + (next ? ` (${next[1]} at ${gp(next[0], false)})` : '');
+        return `<span class="pill t-${t[1].toLowerCase()}" title="${esc(tip)}">${t[1]}</span>`;
     }
 
     function list(el, rows, value, opts) {
         if (!rows.length) {
-            el.innerHTML = `<div class="empty">No flips this ${LABELS[win]} yet.</div>`;
+            el.innerHTML = `<div class="empty">${opts.empty || `No flips this ${LABELS[win]} yet.`}</div>`;
             return;
         }
         const max = Math.max(...rows.map(r => Math.abs(value(r)))) || 1;
@@ -195,14 +211,14 @@
             const v = value(r), isMe = me && canon(r.name) === canon(me);
             const color = opts.color(v);
             return `<div class="row${isMe ? ' you' : ''}">
-                <div class="rank r${i + 1}">#${i + 1}</div>
+                <div class="rank">${i < 3 ? `<span class="medal ${['gold', 'silver', 'bronze'][i]}">${i + 1}</span>` : i + 1}</div>
                 <div class="who">
-                    <div class="name"><strong>${esc(r.name)}</strong>${isMe ? '<span class="pill you">YOU</span>' : ''}${tierOf(r.name)}</div>
+                    <div class="name"><strong>${esc(r.name)}</strong>${isMe ? '<span class="pill you">YOU</span>' : ''}${opts.tier ? tierOf(r.name) : ''}</div>
                     ${opts.sub ? `<div class="item">${esc(opts.sub(r) || '')}</div>` : ''}
                 </div>
                 <div class="val">
                     <div class="num ${opts.cls(v)}">${opts.fmt(v)}</div>
-                    <div class="bar"><i style="width:${Math.max(3, Math.round(Math.abs(v) / max * 100))}%;background:${color}"></i></div>
+                    <div class="bar"><i class="${v < 0 ? 'neg' : ''}" style="width:${Math.max(3, Math.round(Math.abs(v) / max * 100))}%"></i></div>
                 </div>
             </div>`;
         }).join('');
@@ -219,11 +235,13 @@
         const cur = w.current.slice();
         const green = 'var(--green)', red = 'var(--red)';
         list(document.getElementById('profit'), cur.slice().sort((a, b) => b.profit - a.profit), r => r.profit,
-            { fmt: gp, cls: v => v >= 0 ? 'pos' : 'neg', color: v => v >= 0 ? green : red });
+            { fmt: gp, cls: v => v >= 0 ? 'pos' : 'neg', color: v => v >= 0 ? green : red, tier: true });
         list(document.getElementById('flips'), cur.filter(r => r.flips > 0).sort((a, b) => b.flips - a.flips || b.profit - a.profit), r => r.flips,
             { fmt: v => v.toLocaleString(), cls: () => 'flips', color: () => 'var(--blue)' });
         list(document.getElementById('best'), cur.filter(r => r.best != null).sort((a, b) => b.best - a.best), r => r.best,
             { fmt: gp, cls: v => v >= 0 ? 'pos' : 'neg', color: v => v >= 0 ? green : red, sub: r => r.bestItem });
+        list(document.getElementById('worst'), cur.filter(r => r.worst != null && r.worst < 0).sort((a, b) => a.worst - b.worst), r => r.worst,
+            { fmt: gp, cls: () => 'neg', color: () => red, sub: r => r.worstItem, empty: `No losing flips this ${LABELS[win]}.` });
 
         const prev = w.previous && w.previous.slice().sort((a, b) => b.profit - a.profit)[0];
         document.getElementById('previous').innerHTML = prev
@@ -248,9 +266,9 @@
         }
     }
 
-    document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
         win = b.dataset.win;
-        document.querySelectorAll('.seg button').forEach(t => t.setAttribute('aria-selected', t === b));
+        document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t === b));
         render();
     }));
     document.getElementById('me').addEventListener('change', e => {
