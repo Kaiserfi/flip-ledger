@@ -5,13 +5,13 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Picks consumable flips using the same rules as the Steady Flips checklist,
+ * Picks steady flips using the same rules as the Steady Flips checklist,
  * from bulk price data only (plus cached week history for the top few).
  */
 class Suggester
 {
 	static final int TREND_CANDIDATES = 8;
-	static final int SHOWN = 10;
+	static final int SHOWN = 15;
 
 	static class Suggestion
 	{
@@ -30,7 +30,7 @@ class Suggester
 	}
 
 	static List<Suggestion> compute(PriceService prices, FlipLedgerConfig cfg, boolean membersWorld,
-		java.util.function.IntToLongFunction boughtRecently, Runnable onTrend)
+		java.util.function.IntToLongFunction boughtRecently, java.util.function.IntPredicate busy, Runnable onTrend)
 	{
 		List<Suggestion> out = new ArrayList<>();
 		if (prices.mapping.isEmpty() || prices.hour.isEmpty())
@@ -58,12 +58,12 @@ class Suggester
 		List<Suggestion> candidates = new ArrayList<>();
 		for (PriceService.Item it : prices.mapping.values())
 		{
-			if (it.limit <= 0 || (it.members && !membersWorld) || blocked.contains(it.id))
+			if (it.limit <= 0 || (it.members && !membersWorld) || blocked.contains(it.id) || busy.test(it.id))
 			{
 				continue;
 			}
 			Consumables.Group g = Consumables.groupOf(it.name);
-			if (g == null || !Consumables.enabled(g, cfg))
+			if (g == null ? !cfg.catOther() : !Consumables.enabled(g, cfg))
 			{
 				continue;
 			}

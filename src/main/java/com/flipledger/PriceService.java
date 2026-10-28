@@ -28,7 +28,7 @@ class PriceService
 {
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PriceService.class);
 	private static final String BASE = "https://prices.runescape.wiki/api/v1/osrs/";
-	private static final String USER_AGENT = "Flip Ledger RuneLite plugin - consumable flip suggestions";
+	private static final String USER_AGENT = "Flip Ledger RuneLite plugin - flip suggestions";
 
 	static final long HOUR_INTERVAL = 10 * 60_000L;      // /1h and /5m
 	static final long DAY_INTERVAL = 30 * 60_000L;       // /24h

@@ -513,7 +513,8 @@ public class FlipLedgerPlugin extends Plugin
 		}
 		else
 		{
-			list = Suggester.compute(prices, config, membersWorld, this::boughtRecently, this::recomputeSuggestions);
+			list = Suggester.compute(prices, config, membersWorld, this::boughtRecently, busyItems(),
+				this::recomputeSuggestions);
 			status = "OSRS Wiki prices, updated " + new SimpleDateFormat("HH:mm").format(new Date(prices.hourAt))
 				+ (membersWorld ? "" : " (F2P items)");
 		}
@@ -846,6 +847,45 @@ public class FlipLedgerPlugin extends Plugin
 		}
 	}
 
+	/** Items already in your GE slots or still being flipped: never suggested again until they're done. */
+	private java.util.function.IntPredicate busyItems()
+	{
+		java.util.Set<Integer> busy = new java.util.HashSet<>();
+		for (OfferView o : lastOffers)
+		{
+			busy.add(o.itemId);
+		}
+		LedgerData d = data;
+		if (d != null)
+		{
+			try
+			{
+				for (LedgerData.Flip f : new java.util.ArrayList<>(d.history))
+				{
+					if (f.open)
+					{
+						busy.add(f.itemId);
+					}
+				}
+			}
+			catch (java.util.ConcurrentModificationException ignored)
+			{
+				// the game thread changed history mid-copy; the next refresh catches it
+			}
+		}
+		return busy::contains;
+	}
+
+	private static java.util.Set<Integer> offerItems(java.util.List<OfferView> views)
+	{
+		java.util.Set<Integer> s = new java.util.HashSet<>();
+		for (OfferView v : views)
+		{
+			s.add(v.itemId);
+		}
+		return s;
+	}
+
 	/** Units of an item bought in its current 4-hour buy-limit window. */
 	private long boughtRecently(int itemId)
 	{
@@ -1084,7 +1124,12 @@ public class FlipLedgerPlugin extends Plugin
 					o.getPrice(), o.getSpent(), avg));
 			}
 		}
+		boolean itemsChanged = !offerItems(views).equals(offerItems(lastOffers));
 		lastOffers = views;
+		if (itemsChanged)
+		{
+			executor.execute(this::recomputeSuggestions); // refill suggestions when an item enters or leaves the GE
+		}
 		SwingUtilities.invokeLater(() -> panel.updateOffers(views));
 	}
 

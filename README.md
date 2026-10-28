@@ -20,7 +20,7 @@ Flip Ledger is **display only**: it never clicks, types or fills in prices for y
   - whether processing the item would pay better.
 - **Processing:** when you turn something you bought into something else (ore to bars, grimy to clean herbs to unfinished potions, logs to arrow shafts to headless arrows...), the cost carries over, so the final sale shows your real profit.
 - **Price drop alerts:** a chat warning and notification when something you hold or are selling drops below your break-even or falls fast. It includes a processing tip when making something from it is worth more.
-- **Suggestions:** steady consumable flips (potions, food, runes, ammo, herbs and more), one at a time. Skip or block any you don't want. They're sized to your budget, fill time and remaining buy limit, and avoid items that are sliding or spiking.
+- **Suggestions:** steady flips across every tradeable item (or just the groups you pick: potions, food, runes, ammo, herbs, gear and more), one at a time. Skip or block any you don't want. They're sized to your budget, fill time and remaining buy limit, and avoid items that are sliding or spiking.
 - **Per account:** each account keeps its own history (for example, a main and an F2P account).
 
 ## Data and privacy

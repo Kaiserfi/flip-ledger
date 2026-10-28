@@ -6,7 +6,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Sorts GE items into consumable groups by name. Anything that doesn't match isn't suggested.
+ * Sorts GE items into consumable groups by name. Anything else falls under "Everything else".
  */
 final class Consumables
 {

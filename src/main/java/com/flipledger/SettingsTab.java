@@ -82,6 +82,7 @@ class SettingsTab extends JPanel
 		check("Bones & ashes", "catBones", config.catBones());
 		check("Teleports", "catTeleports", config.catTeleports());
 		check("Other supplies", "catSupplies", config.catSupplies());
+		check("Everything else (gear, resources...)", "catOther", config.catOther());
 
 		header("Display");
 		check("Price check while making offers", "showPriceCheck", config.showPriceCheck());

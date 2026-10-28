@@ -14,7 +14,7 @@ public interface FlipLedgerConfig extends Config
 	@ConfigSection(name = "Flipping session", description = "How suggestions are picked and sized", position = 0)
 	String session = "session";
 
-	@ConfigSection(name = "Item types", description = "Which consumables to suggest", position = 1)
+	@ConfigSection(name = "Item types", description = "Which kinds of items to suggest", position = 1)
 	String types = "types";
 
 	@ConfigSection(name = "Display", description = "Floating text and chat", position = 2)
@@ -169,6 +169,13 @@ public interface FlipLedgerConfig extends Config
 
 	@ConfigItem(keyName = "catSupplies", name = "Other supplies", description = "Essence, ether, splinters, ice sacks, coconuts and similar", section = types, position = 9)
 	default boolean catSupplies()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "catOther", name = "Everything else", description = "Gear, weapons, resources, rares and any other item that trades steadily",
+		section = types, position = 10)
+	default boolean catOther()
 	{
 		return true;
 	}
