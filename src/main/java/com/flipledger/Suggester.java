@@ -242,15 +242,14 @@ class Suggester
 		// Re-pricing can change the order
 		out.sort(Comparator.comparingLong((Suggestion s) -> s.profit).reversed());
 
-		// Fit the list inside the total budget, best first
-		long left = budget;
+		// Each suggestion only has to fit your budget on its own: you place them one at a time, and once one is
+		// in the GE your cash drops and the rest are re-sized to what's left
 		List<Suggestion> fitted = new ArrayList<>();
 		for (Suggestion s : out)
 		{
-			if (s.cost <= left)
+			if (s.cost <= budget)
 			{
 				fitted.add(s);
-				left -= s.cost;
 			}
 		}
 		return fitted;
