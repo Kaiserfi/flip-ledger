@@ -52,7 +52,10 @@ final class Alch
 		return nat + (fireStaff ? 0 : 5 * buyPrice(prices, FIRE_RUNE));
 	}
 
-	/** The best items to alch right now, most profit per 4-hour buy limit first. */
+	/**
+	 * The best items to alch right now, most profit per cast first. Casting speed is the real limit
+	 * (about 4,800 casts per 4 hours), so each cast should go to the best item until its buy limit runs out.
+	 */
 	static List<Pick> best(PriceService prices, boolean members, boolean fireStaff, IntToLongFunction boughtRecently, int count)
 	{
 		long runes = castCost(prices, fireStaff);
@@ -93,7 +96,7 @@ final class Alch
 				out.add(p);
 			}
 		}
-		out.sort(Comparator.comparingLong((Pick p) -> p.perLimit).reversed());
+		out.sort(Comparator.comparingLong((Pick p) -> p.profit).reversed());
 		return out.size() > count ? new ArrayList<>(out.subList(0, count)) : out;
 	}
 }
