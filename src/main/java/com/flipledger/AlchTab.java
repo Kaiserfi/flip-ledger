@@ -176,8 +176,9 @@ class AlchTab extends JPanel
 		add(picksTitle);
 		add(picks);
 
-		JLabel note = new JLabel("<html><body style='width:150px'>Profit is after the nature rune. Sorted by profit per "
-			+ "4-hour buy limit. Casts are counted when an item turns into coins with a nature rune used.</body></html>");
+		JLabel note = new JLabel("<html><body style='width:150px'>Profit is after the nature rune. Best per cast first: "
+			+ "use up the top items' buy limits, then fill the rest of your casts further down. Casts are counted "
+			+ "when an item turns into coins with a nature rune used.</body></html>");
 		note.setForeground(Color.GRAY);
 		note.setBorder(new EmptyBorder(8, 0, 0, 0));
 		note.setAlignmentX(Component.LEFT_ALIGNMENT);
