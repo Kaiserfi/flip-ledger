@@ -237,8 +237,14 @@ class PriceService
 	/** Cached 30-minute typical prices for one item (only for the item you're making an offer for). */
 	Recent recent(int id, Runnable onChange)
 	{
+		return recent(id, onChange, RECENT_TTL);
+	}
+
+	/** Same, but accept a cached answer up to {@code maxAgeMs} old (suggestions don't need it every minute). */
+	Recent recent(int id, Runnable onChange, long maxAgeMs)
+	{
 		Recent r = recents.get(id);
-		if (r != null && System.currentTimeMillis() - r.at < RECENT_TTL)
+		if (r != null && System.currentTimeMillis() - r.at < maxAgeMs)
 		{
 			return r;
 		}

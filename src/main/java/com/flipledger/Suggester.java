@@ -12,6 +12,9 @@ class Suggester
 {
 	static final int TREND_CANDIDATES = 8;
 	static final int SHOWN = 15;
+	/** The best few are re-priced with the same 30-minute data the price check uses (refreshed at most every 5 min). */
+	static final int RECENT_CHECKS = 5;
+	static final long RECENT_MAX_AGE = 5 * 60_000L;
 
 	static class Suggestion
 	{
@@ -27,6 +30,37 @@ class Suggester
 		int fillMinutes;
 		String status; // steady, settled, checking...
 		String why;
+		long limitLeft;
+		long vol;
+	}
+
+	/** Size a suggestion at these prices. False if it isn't worth a slot (thin margin or too little profit). */
+	private static boolean size(Suggestion s, long buy, long sell, long minProfit, long perSlot, int minutes)
+	{
+		if (buy < 10 || sell <= 0)
+		{
+			return false;
+		}
+		long margin = sell - Gp.taxPerItem(sell) - buy;
+		long minMargin = Math.max(1, Math.round(buy * 0.005));
+		if (margin < minMargin || margin > buy * 0.6)
+		{
+			return false;
+		}
+		long qty = Math.min(s.limitLeft, (long) (s.vol * (minutes / 60.0) * 0.5));
+		qty = Math.min(qty, perSlot / buy);
+		if (qty < 1 || margin * qty < minProfit)
+		{
+			return false;
+		}
+		s.buy = buy;
+		s.sell = sell;
+		s.qty = qty;
+		s.profit = margin * qty;
+		s.cost = qty * buy;
+		s.breakEven = breakEven(buy);
+		s.fillMinutes = (int) Math.max(1, Math.round(qty * 60.0 / Math.max(1, s.vol)));
+		return true;
 	}
 
 	static List<Suggestion> compute(PriceService prices, FlipLedgerConfig cfg, boolean membersWorld,
@@ -77,23 +111,22 @@ class Suggester
 				continue;
 			}
 
+			// Prefer the last 5 minutes when both sides traded enough there: the hour average lags behind a
+			// price that's moving (bid too low on a rise, sell too high after a spike)
 			long buy = h.low;
 			long sell = h.high;
-			// Use the most cautious prices we know. Buy: if sellers want more in the last 5 minutes than the hour
-			// average, an old cheap price won't fill. Sell: a brief spike in the hour average shouldn't make a margin.
 			PriceService.Window f5 = prices.fiveMin.get(it.id);
-			if (f5 != null && f5.low > 0)
+			long need5 = Math.max(3, Math.min(h.highVol, h.lowVol) / 40);
+			if (f5 != null && f5.low > 0 && f5.high > 0 && f5.lowVol >= need5 && f5.highVol >= need5)
 			{
-				buy = Math.max(buy, f5.low);
+				buy = f5.low;
+				sell = f5.high;
 			}
-			if (f5 != null && f5.high > 0)
+			else if (f5 != null)
 			{
-				sell = Math.min(sell, f5.high);
-			}
-			PriceService.Window d0 = prices.day.get(it.id);
-			if (d0 != null && d0.high > 0)
-			{
-				sell = Math.min(sell, d0.high);
+				// Too few recent trades to trust on their own: just stay cautious
+				buy = f5.low > 0 ? Math.max(buy, f5.low) : buy;
+				sell = f5.high > 0 ? Math.min(sell, f5.high) : sell;
 			}
 			if (buy < 10)
 			{
@@ -147,26 +180,35 @@ class Suggester
 			Suggestion s = new Suggestion();
 			s.id = it.id;
 			s.name = it.name;
-			s.buy = buy;
-			s.sell = sell;
-			s.qty = qty;
-			s.profit = profit;
-			s.cost = qty * buy;
-			s.breakEven = be;
 			s.perHour = vol;
-			s.fillMinutes = (int) Math.max(1, Math.round(qty * 60.0 / Math.max(1, vol)));
-			candidates.add(s);
+			s.vol = vol;
+			s.limitLeft = limitLeft;
+			if (size(s, buy, sell, minProfit, perSlot, minutes))
+			{
+				candidates.add(s);
+			}
 		}
 
 		candidates.sort(Comparator.comparingLong((Suggestion s) -> s.profit).reversed());
 
 		// Week trend only for the top few, cached for hours
 		int checked = 0;
+		int repriced = 0;
 		for (Suggestion s : candidates)
 		{
 			if (out.size() >= SHOWN)
 			{
 				break;
+			}
+			if (repriced < RECENT_CHECKS)
+			{
+				// Re-price with the typical prices of the last 30 minutes, like the price check box
+				repriced++;
+				PriceService.Recent r = prices.recent(s.id, onTrend, RECENT_MAX_AGE);
+				if (r != null && r.seller > 0 && r.buyer > 0 && !size(s, r.seller, r.buyer, minProfit, perSlot, minutes))
+				{
+					continue; // the margin isn't there on recent trades
+				}
 			}
 			if (checked < TREND_CANDIDATES)
 			{
@@ -196,6 +238,9 @@ class Suggester
 			}
 			out.add(s);
 		}
+
+		// Re-pricing can change the order
+		out.sort(Comparator.comparingLong((Suggestion s) -> s.profit).reversed());
 
 		// Fit the list inside the total budget, best first
 		long left = budget;
