@@ -30,7 +30,7 @@ class Suggester
 	}
 
 	static List<Suggestion> compute(PriceService prices, FlipLedgerConfig cfg, boolean membersWorld,
-		java.util.function.IntToLongFunction boughtRecently, java.util.function.IntPredicate busy, Runnable onTrend)
+		java.util.function.IntToLongFunction boughtRecently, java.util.function.IntPredicate busy, long cash, Runnable onTrend)
 	{
 		List<Suggestion> out = new ArrayList<>();
 		if (prices.mapping.isEmpty() || prices.hour.isEmpty())
@@ -39,6 +39,10 @@ class Suggester
 		}
 
 		long budget = parse(cfg.budget(), 50_000_000L);
+		if (cash >= 0)
+		{
+			budget = Math.min(budget, cash); // never suggest more than you actually have
+		}
 		long perSlot = Math.min(budget, parse(cfg.maxPerSlot(), 10_000_000L));
 		long minProfit = parse(cfg.minProfit(), 25_000L);
 		int minutes = cfg.fillWindow().minutes;

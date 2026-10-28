@@ -513,10 +513,15 @@ public class FlipLedgerPlugin extends Plugin
 		}
 		else
 		{
-			list = Suggester.compute(prices, config, membersWorld, this::boughtRecently, busyItems(),
+			long cash = cash();
+			lastSuggestCash = cash;
+			lastSuggestAt = System.currentTimeMillis();
+			list = Suggester.compute(prices, config, membersWorld, this::boughtRecently, busyItems(), cash,
 				this::recomputeSuggestions);
+			long budget = Suggester.parse(config.budget(), 50_000_000L);
+			String cashNote = cash >= 0 && cash < budget ? " Sized to your " + Gp.shortGp(cash) + " cash." : "";
 			status = "OSRS Wiki prices, updated " + new SimpleDateFormat("HH:mm").format(new Date(prices.hourAt))
-				+ (membersWorld ? "" : " (F2P items)");
+				+ (membersWorld ? "" : " (F2P items)") + "." + cashNote;
 		}
 		SwingUtilities.invokeLater(() -> panel.updateSuggestions(list, status));
 	}
@@ -608,6 +613,8 @@ public class FlipLedgerPlugin extends Plugin
 	private volatile long alchSessionProfit;
 	/** Last High Alch: {itemId, coins, item cost, rune cost, profit}, or null. */
 	private volatile long[] lastAlch;
+	private volatile long lastSuggestCash = -1;
+	private volatile long lastSuggestAt;
 
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged e)
@@ -628,6 +635,7 @@ public class FlipLedgerPlugin extends Plugin
 				data.bankCoins = coins;
 				data.bankSeenAt = System.currentTimeMillis();
 				save();
+				maybeResizeSuggestions();
 			}
 			refreshAlch();
 			return;
@@ -651,6 +659,7 @@ public class FlipLedgerPlugin extends Plugin
 		java.util.Map<Integer, Integer> before = lastInv;
 		lastInv = now;
 		invCoins = now.getOrDefault(Alch.COINS, 0);
+		maybeResizeSuggestions();
 		// Banking moves items in and out at once; cleaning never happens with the bank open
 		if (before == null || data == null || recipes == null || client.getWidget(InterfaceID.Bankmain.UNIVERSE) != null)
 		{
@@ -862,6 +871,35 @@ public class FlipLedgerPlugin extends Plugin
 		catch (IllegalArgumentException e)
 		{
 			return 0;
+		}
+	}
+
+	/**
+	 * Coins you can spend: inventory plus the bank (as last seen), or -1 before we've seen your inventory.
+	 * Coins already sitting in buy offers are spent, so they don't count.
+	 */
+	private long cash()
+	{
+		if (!loggedIn || lastInv == null)
+		{
+			return -1;
+		}
+		LedgerData d = data;
+		return invCoins + (d == null ? 0 : Math.max(0, d.bankCoins));
+	}
+
+	/** Re-size suggestions when your cash changes a lot (at most every 30 seconds). */
+	private void maybeResizeSuggestions()
+	{
+		long c = cash();
+		if (c < 0 || System.currentTimeMillis() - lastSuggestAt < 30_000)
+		{
+			return;
+		}
+		long before = lastSuggestCash;
+		if (before < 0 || Math.abs(c - before) > Math.max(50_000, before / 10))
+		{
+			executor.execute(this::recomputeSuggestions);
 		}
 	}
 
