@@ -294,6 +294,10 @@ public class FlipLedgerPlugin extends Plugin
 	private void onLogin()
 	{
 		lastInv = null; // don't compare against another account's inventory
+		if (crew != null)
+		{
+			crew.markDirty(); // resend this account's results once after logging in
+		}
 		if (client.getLocalPlayer() != null && client.getLocalPlayer().getName() != null)
 		{
 			playerName = client.getLocalPlayer().getName();
