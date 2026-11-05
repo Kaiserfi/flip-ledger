@@ -2,6 +2,7 @@
 rem Starts RuneLite with Flip Ledger and all your normal Plugin Hub plugins.
 rem First time (and after changing the plugin): run the Gradle task "devJar" in IntelliJ.
 rem Add "safe" after the file name (Launch RuneLite.bat safe) to skip Plugin Hub plugins.
+rem Add "debug" to keep this window open and write build\launch.log (use it if RuneLite won't start).
 setlocal
 title RuneLite + Flip Ledger
 set "JAR=%~dp0build\libs\flip-ledger-runelite.jar"
@@ -25,11 +26,26 @@ if not defined JAVA (
 )
 
 set "EXTRA="
+set "DEBUG="
+:args
+if "%~1"=="" goto run
 if /i "%~1"=="safe" set "EXTRA=--safe-mode"
+if /i "%~1"=="debug" set "DEBUG=1"
+shift
+goto args
 
+:run
+if defined DEBUG goto debug
+
+rem Normal launch: start RuneLite with javaw (no console window) and close this window right away.
+set "JAVAW=%JAVA:java.exe=javaw.exe%"
+if not exist "%JAVAW%" set "JAVAW=%JAVA%"
+start "" "%JAVAW%" -ea -Xmx768m -jar "%JAR%" --developer-mode %EXTRA%
+exit /b 0
+
+:debug
 echo Using Java: %JAVA%
-echo Starting RuneLite with Flip Ledger... keep this window open while you play (you can minimize it).
-echo Log: %LOG%
+echo Debug mode: keep this window open while you play. Log: %LOG%
 > "%LOG%" echo Java: %JAVA%
 "%JAVA%" -version >> "%LOG%" 2>&1
 "%JAVA%" -ea -Xmx768m -jar "%JAR%" --developer-mode %EXTRA% >> "%LOG%" 2>&1
