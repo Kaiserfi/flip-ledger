@@ -19,6 +19,9 @@ class Suggester
 	static final long LATEST_MAX_AGE = 3 * 60_000L;
 	/** Both sides must have traded within this many seconds, or the item isn't trading right now. */
 	static final long FRESH_SEC = 600;
+	/** What the last compute() hid, so an empty list can say why. */
+	static volatile int hiddenQueue;
+	static volatile int hiddenRisky;
 
 	static class Suggestion
 	{
@@ -44,6 +47,8 @@ class Suggester
 		/** Last 30 minutes: "ok", "warn" or "bad"; null when not checked. */
 		String steadiness;
 		String steadyWhy;
+		/** Set by size() when it refuses because of the queue-only rule. */
+		boolean droppedByQueue;
 	}
 
 	/** One tick: about 0.1% of the price, at least 1 gp. The smallest step that jumps a queue. */
@@ -174,6 +179,7 @@ class Suggester
 		}
 		if (queueSafe && margin < 3 * tick(buy))
 		{
+			s.droppedByQueue = true;
 			return false; // a tick or two of margin: you'd sit behind the queue and never fill
 		}
 		long qty = Math.min(s.limitLeft, (long) (s.vol * (minutes / 60.0) * 0.5));
@@ -196,6 +202,10 @@ class Suggester
 		java.util.function.IntToLongFunction boughtRecently, java.util.function.IntPredicate busy, long cash, Runnable onTrend)
 	{
 		List<Suggestion> out = new ArrayList<>();
+		hiddenQueue = 0;
+		hiddenRisky = 0;
+		int hq = 0;
+		int hr = 0;
 		if (prices.mapping.isEmpty() || prices.hour.isEmpty())
 		{
 			return out;
@@ -278,6 +288,7 @@ class Suggester
 			}
 			if (queueSafe && margin < 3 * tick(buy))
 			{
+				hq++;
 				continue;
 			}
 
@@ -339,6 +350,10 @@ class Suggester
 			{
 				candidates.add(s);
 			}
+			else if (s.droppedByQueue)
+			{
+				hq++;
+			}
 		}
 
 		candidates.sort(Comparator.comparingLong((Suggestion s) -> s.profit).reversed());
@@ -380,6 +395,10 @@ class Suggester
 					long sell = Math.min(r.buyer, s.hi); // typical buyer, never above the hourly average
 					if (!size(s, buy, sell, minProfit, perSlot, minutes, queueSafe))
 					{
+						if (s.droppedByQueue)
+						{
+							hq++;
+						}
 						continue; // the margin isn't there on recent trades
 					}
 					Stability st = stability(r.sellers, r.buyers);
@@ -418,6 +437,7 @@ class Suggester
 				|| "unsteady".equals(s.status);
 			if (risky && !cfg.showRisky())
 			{
+				hr++;
 				continue;
 			}
 			out.add(s);
@@ -437,6 +457,8 @@ class Suggester
 				fitted.add(s);
 			}
 		}
+		hiddenQueue = hq;
+		hiddenRisky = hr;
 		return fitted;
 	}
 

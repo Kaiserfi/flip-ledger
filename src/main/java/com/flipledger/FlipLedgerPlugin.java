@@ -572,8 +572,15 @@ public class FlipLedgerPlugin extends Plugin
 				this::recomputeSuggestions);
 			long budget = Suggester.parse(config.budget(), 50_000_000L);
 			String cashNote = cash >= 0 && cash < budget ? " Sized to your " + Gp.shortGp(cash) + " cash." : "";
+			String hidden = "";
+			if (list.isEmpty() && (Suggester.hiddenQueue > 0 || Suggester.hiddenRisky > 0))
+			{
+				hidden = " Hidden:" + (Suggester.hiddenQueue > 0 ? " " + Suggester.hiddenQueue + " by 'Skip queue-only margins'" : "")
+					+ (Suggester.hiddenQueue > 0 && Suggester.hiddenRisky > 0 ? "," : "")
+					+ (Suggester.hiddenRisky > 0 ? " " + Suggester.hiddenRisky + " risky (tick 'Show risky items')" : "") + ".";
+			}
 			status = "OSRS Wiki prices, updated " + new SimpleDateFormat("HH:mm").format(new Date(prices.hourAt))
-				+ (membersWorld ? "" : " (F2P items)") + "." + cashNote;
+				+ (membersWorld ? "" : " (F2P items)") + "." + cashNote + hidden;
 		}
 		SwingUtilities.invokeLater(() -> panel.updateSuggestions(list, status));
 	}

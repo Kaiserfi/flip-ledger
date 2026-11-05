@@ -120,11 +120,11 @@ public interface FlipLedgerConfig extends Config
 	// ---------- item types ----------
 
 	@ConfigItem(keyName = "skipQueueMargins", name = "Skip queue-only margins",
-		description = "Hide suggestions whose margin is only a tick or two: on busy items you'd sit behind the queue and never fill",
+		description = "Hide suggestions with under 3 gp of margin each (a tick or two). Strict: it removes most cheap, high-volume items",
 		section = session, position = 7)
 	default boolean skipQueueMargins()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(keyName = "dailyGoal", name = "Daily goal",
