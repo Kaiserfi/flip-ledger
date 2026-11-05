@@ -260,6 +260,7 @@ public interface FlipLedgerConfig extends Config
 	enum FillWindow
 	{
 		MIN_5("5 min", 5),
+		MIN_10("10 min", 10),
 		MIN_15("15 min", 15),
 		MIN_30("30 min", 30),
 		HOUR_1("1 hour", 60),
