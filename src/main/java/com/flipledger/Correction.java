@@ -22,17 +22,17 @@ final class Correction
 	{
 		final long price;
 		final String text;
-		/** The correction would lose money (a sell below your cost, or a buy that leaves no margin). */
+		/** The correction would lose money, or earn nothing. */
 		final boolean loss;
-		/** Buys only: the market has moved so far that no price that fills leaves a profit. */
-		final boolean cancel;
+		/** No price that fills leaves a profit: cancel a buy, or hold a sell instead of repricing it. */
+		final boolean stop;
 
-		Advice(long price, String text, boolean loss, boolean cancel)
+		Advice(long price, String text, boolean loss, boolean stop)
 		{
 			this.price = price;
 			this.text = text;
 			this.loss = loss;
-			this.cancel = cancel;
+			this.stop = stop;
 		}
 	}
 
@@ -66,25 +66,29 @@ final class Correction
 		{
 			// What you could sell for once it fills: if paying the market price leaves nothing, don't chase it
 			boolean sellKnown = latest.high > 0 && nowSec - latest.highTime <= MAX_TRADE_AGE_SEC;
-			if (sellKnown && latest.high - Gp.taxPerItem(latest.high) - market <= 0)
+			long margin = sellKnown ? latest.high - Gp.taxPerItem(latest.high) - market : Long.MIN_VALUE;
+			if (sellKnown && margin <= 0)
 			{
 				return new Advice(market, String.format(
-					"Sellers are at %,d now, which leaves no profit (buyers pay %,d). Consider cancelling", market, latest.high),
+					"Cancel? Sellers are at %,d, which leaves no profit (buyers pay %,d)", market, latest.high),
 					true, true);
 			}
-			return new Advice(market, String.format("Raise to %,d (+%,d each)", market, gap), false, false);
+			return new Advice(market, String.format("Raise to %,d (+%,d each)%s", market, gap,
+				sellKnown ? String.format(", still +%,d each after tax", margin) : ""), false, false);
 		}
-		boolean loss = false;
-		String extra = "";
 		if (avgCost >= 0)
 		{
 			long net = market - Gp.taxPerItem(market) - avgCost;
-			if (net < 0)
+			if (net <= 0)
 			{
-				loss = true;
-				extra = String.format(", loses about %,d. Break-even is %,d", -net * remaining, Suggester.breakEven(avgCost));
+				return new Advice(market, String.format(
+					"Hold: buyers pay %,d, at or below your break-even %,d. Selling there %s", market,
+					Suggester.breakEven(avgCost), net < 0 ? String.format("loses about %,d", -net * remaining) : "earns nothing"),
+					true, true);
 			}
+			return new Advice(market, String.format("Lower to %,d (-%,d each), still +%,d each after tax", market, gap, net),
+				false, false);
 		}
-		return new Advice(market, String.format("Lower to %,d (-%,d each)%s", market, gap, extra), loss, false);
+		return new Advice(market, String.format("Lower to %,d (-%,d each)", market, gap), false, false);
 	}
 }

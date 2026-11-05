@@ -28,7 +28,7 @@ public class CorrectionTest
 		Correction.Advice a = Correction.advise(true, 940, 10, latest(981, 950, 60), -1, true, NOW);
 		assertNotNull(a);
 		assertEquals(950, a.price); // not 981, which is where you'd sell
-		assertFalse(a.cancel);
+		assertFalse(a.stop);
 	}
 
 	@Test
@@ -43,8 +43,16 @@ public class CorrectionTest
 	{
 		Correction.Advice a = Correction.advise(true, 80, 10, latest(100, 99, 60), -1, true, NOW);
 		assertNotNull(a);
-		assertTrue(a.cancel);
+		assertTrue(a.stop);
 		assertTrue(a.loss);
+	}
+
+	@Test
+	public void buyCorrectionShowsTheMarginLeft()
+	{
+		Correction.Advice a = Correction.advise(true, 940, 10, latest(981, 950, 60), -1, true, NOW);
+		assertNotNull(a);
+		assertTrue(a.text, a.text.contains("still +12 each after tax")); // 981 - 19 tax - 950
 	}
 
 	@Test
@@ -55,12 +63,14 @@ public class CorrectionTest
 	}
 
 	@Test
-	public void stalledSellAboveWhatBuyersPayIsLowered()
+	public void stalledSellAboveWhatBuyersPayIsLoweredWhileStillProfitable()
 	{
 		Correction.Advice a = Correction.advise(false, 1100, 10, latest(1000, 950, 60), 800, true, NOW);
 		assertNotNull(a);
 		assertEquals(1000, a.price);
 		assertFalse(a.loss);
+		assertFalse(a.stop);
+		assertTrue(a.text, a.text.contains("+180 each"));
 	}
 
 	@Test
@@ -70,12 +80,33 @@ public class CorrectionTest
 	}
 
 	@Test
-	public void sellCorrectionBelowCostIsMarkedAsLoss()
+	public void sellIsHeldWhenLoweringWouldLoseMoney()
 	{
-		Correction.Advice a = Correction.advise(false, 1100, 10, latest(1000, 950, 60), 1200, true, NOW);
+		// Raw pyre fox: bought at 832, asking 849, buyers pay 832
+		Correction.Advice a = Correction.advise(false, 849, 208, latest(832, 800, 60), 832, true, NOW);
 		assertNotNull(a);
+		assertTrue(a.stop);
 		assertTrue(a.loss);
-		assertFalse(a.cancel);
+		assertTrue(a.text, a.text.startsWith("Hold"));
+	}
+
+	@Test
+	public void sellIsHeldWhenLoweringWouldEarnNothing()
+	{
+		// Adamant arrow: bought at 20, asking 21, buyers pay 20 (no tax under 50 gp)
+		Correction.Advice a = Correction.advise(false, 21, 11000, latest(20, 19, 60), 20, true, NOW);
+		assertNotNull(a);
+		assertTrue(a.stop);
+		assertTrue(a.text, a.text.contains("earns nothing"));
+	}
+
+	@Test
+	public void sellWithUnknownCostIsStillLowered()
+	{
+		Correction.Advice a = Correction.advise(false, 1100, 10, latest(1000, 950, 60), -1, true, NOW);
+		assertNotNull(a);
+		assertEquals(1000, a.price);
+		assertFalse(a.stop);
 	}
 
 	@Test
