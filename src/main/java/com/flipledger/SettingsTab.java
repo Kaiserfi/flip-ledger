@@ -61,6 +61,7 @@ class SettingsTab extends JPanel
 		row("Fill window", fill);
 
 		check("Show risky items", "showRisky", config.showRisky());
+		check("Skip queue-only margins", "skipQueueMargins", config.skipQueueMargins());
 		check("Suggestions (Wiki prices)", "suggestions", config.suggestions());
 		int blockedCount = config.blockedItems().trim().isEmpty() ? 0 : config.blockedItems().split(",").length;
 		javax.swing.JButton unblock = new javax.swing.JButton("Unblock all (" + blockedCount + ")");

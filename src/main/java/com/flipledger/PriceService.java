@@ -225,12 +225,17 @@ class PriceService
 		final long at;
 		final long seller;
 		final long buyer;
+		/** The 5-minute seller / buyer averages behind those medians (quiet periods left out). */
+		final List<Long> sellers;
+		final List<Long> buyers;
 
-		Recent(long at, long seller, long buyer)
+		Recent(long at, long seller, long buyer, List<Long> sellers, List<Long> buyers)
 		{
 			this.at = at;
 			this.seller = seller;
 			this.buyer = buyer;
+			this.sellers = sellers;
+			this.buyers = buyers;
 		}
 	}
 
@@ -264,7 +269,7 @@ class PriceService
 					highs.add(hi);
 				}
 			}
-			recents.put(id, new Recent(System.currentTimeMillis(), median(lows), median(highs)));
+			recents.put(id, new Recent(System.currentTimeMillis(), median(lows), median(highs), lows, highs));
 			if (recents.size() > 200)
 			{
 				recents.clear();

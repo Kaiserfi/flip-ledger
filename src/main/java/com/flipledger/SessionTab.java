@@ -626,6 +626,14 @@ class SessionTab extends JPanel
 			lines.add(line(String.format("Qty %,d  ·  %s gp", s.qty, Gp.shortGp(s.cost)), Color.LIGHT_GRAY));
 			lines.add(line(String.format("Break-even %,d", s.breakEven), Color.GRAY));
 			lines.add(line(String.format("%s  ·  ~%d min/side", s.status, s.fillMinutes), tag));
+			if ("warn".equals(s.steadiness) && s.steadyWhy != null)
+			{
+				lines.add(line(s.steadyWhy, ORANGE));
+			}
+			if (s.odd != null)
+			{
+				lines.add(line("Odd trade: " + s.odd, ORANGE));
+			}
 			c.add(lines, BorderLayout.CENTER);
 			suggestions.add(c);
 			suggestions.add(Box.createVerticalStrut(3));
