@@ -2,8 +2,10 @@ package com.flipledger;
 
 /**
  * Suggests a new price for a GE offer that is priced away from where the market is trading.
- * A buy bid under what buyers are paying, or a sell ask over it, won't fill; the other direction
- * always fills at the better market price, so it is never flagged.
+ * <p>
+ * A buy offer fills when someone sells into it, so the reference is what instant-sellers are getting
+ * ({@code low}); a sell offer fills when someone buys, so it is what instant-buyers are paying ({@code high}).
+ * A bid above the market, or an ask below it, always fills at the better market price and is never flagged.
  */
 final class Correction
 {
@@ -20,21 +22,24 @@ final class Correction
 	{
 		final long price;
 		final String text;
-		/** A sell correction that would sell below your cost. */
+		/** The correction would lose money (a sell below your cost, or a buy that leaves no margin). */
 		final boolean loss;
+		/** Buys only: the market has moved so far that no price that fills leaves a profit. */
+		final boolean cancel;
 
-		Advice(long price, String text, boolean loss)
+		Advice(long price, String text, boolean loss, boolean cancel)
 		{
 			this.price = price;
 			this.text = text;
 			this.loss = loss;
+			this.cancel = cancel;
 		}
 	}
 
 	/**
 	 * @param price     the offer's price
 	 * @param remaining units still unfilled
-	 * @param latest    most recent trades for the item (what buyers paid is {@code high})
+	 * @param latest    most recent trades for the item
 	 * @param avgCost   sells only: average cost of what you hold, or -1 if unknown
 	 * @param stalled   the offer has had no fills for longer than the fill window
 	 * @return a correction, or null if the offer is fine or there is no fresh price
@@ -42,12 +47,16 @@ final class Correction
 	static Advice advise(boolean buy, long price, long remaining, PriceService.Latest latest, long avgCost,
 		boolean stalled, long nowSec)
 	{
-		if (latest == null || latest.high <= 0 || price <= 0 || remaining <= 0
-			|| nowSec - latest.highTime > MAX_TRADE_AGE_SEC)
+		if (latest == null || price <= 0 || remaining <= 0)
 		{
 			return null;
 		}
-		long market = latest.high;
+		long market = buy ? latest.low : latest.high;
+		long tradedAt = buy ? latest.lowTime : latest.highTime;
+		if (market <= 0 || nowSec - tradedAt > MAX_TRADE_AGE_SEC)
+		{
+			return null;
+		}
 		long gap = buy ? market - price : price - market;
 		if (gap <= 0 || (!stalled && gap * 100 < price * BIG_GAP_PERCENT))
 		{
@@ -55,7 +64,15 @@ final class Correction
 		}
 		if (buy)
 		{
-			return new Advice(market, String.format("Raise to %,d (+%,d each)", market, gap), false);
+			// What you could sell for once it fills: if paying the market price leaves nothing, don't chase it
+			boolean sellKnown = latest.high > 0 && nowSec - latest.highTime <= MAX_TRADE_AGE_SEC;
+			if (sellKnown && latest.high - Gp.taxPerItem(latest.high) - market <= 0)
+			{
+				return new Advice(market, String.format(
+					"Sellers are at %,d now, which leaves no profit (buyers pay %,d). Consider cancelling", market, latest.high),
+					true, true);
+			}
+			return new Advice(market, String.format("Raise to %,d (+%,d each)", market, gap), false, false);
 		}
 		boolean loss = false;
 		String extra = "";
@@ -68,6 +85,6 @@ final class Correction
 				extra = String.format(", loses about %,d. Break-even is %,d", -net * remaining, Suggester.breakEven(avgCost));
 			}
 		}
-		return new Advice(market, String.format("Lower to %,d (-%,d each)%s", market, gap, extra), loss);
+		return new Advice(market, String.format("Lower to %,d (-%,d each)%s", market, gap, extra), loss, false);
 	}
 }

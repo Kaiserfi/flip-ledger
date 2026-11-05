@@ -542,12 +542,13 @@ class SessionTab extends JPanel
 		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		row.setBorder(new EmptyBorder(2, 6, 4, 6));
 		row.setAlignmentX(Component.LEFT_ALIGNMENT);
-		JLabel l = new JLabel("<html><body style='width:150px'><b>" + (v.advice.loss ? "Careful: " : "")
+		JLabel l = new JLabel("<html><body style='width:150px'><b>" + (v.advice.loss && !v.advice.cancel ? "Careful: " : "")
 			+ v.advice.text.replace("<", "&lt;") + "</b></body></html>");
 		l.setForeground(col);
 		row.add(l, BorderLayout.CENTER);
 		row.setToolTipText("<html>Based on the latest trades on the Wiki price feed.<br>"
-			+ "Cancel the offer and relist at this price to fill faster.</html>");
+			+ (v.advice.cancel ? "Cancel the offer if you don't want to chase the price."
+				: "Cancel the offer and relist at this price to fill faster.") + "</html>");
 		return row;
 	}
 

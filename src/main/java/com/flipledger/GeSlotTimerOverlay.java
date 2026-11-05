@@ -83,7 +83,7 @@ class GeSlotTimerOverlay extends Overlay
 			draw(g, fm, Gp.age(now - v.placedAt), b, y, v.stalled ? STALLED : WAITING);
 			if (v.advice != null)
 			{
-				String s = (v.buy ? "Raise " : "Lower ") + Gp.shortGp(v.advice.price);
+				String s = v.advice.cancel ? "Cancel?" : (v.buy ? "Raise " : "Lower ") + Gp.shortGp(v.advice.price);
 				draw(g, fm, s, b, y + fm.getHeight(), v.advice.loss ? LOSS : STALLED);
 			}
 		}
