@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.inject.Provides;
 import java.awt.image.BufferedImage;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -126,6 +127,16 @@ public class FlipLedgerPlugin extends Plugin
 	private long sessionStart;
 	private long sessionProfit;
 	private int sessionFlips;
+	private long sessionBest;
+	private String sessionBestName;
+	private long sessionWorst;
+	private String sessionWorstName;
+	/** Share of GE slot time spent with an active offer, sampled every 10 s while logged in. */
+	private volatile double busySum;
+	private volatile long busySamples;
+	/** When each slot became empty (ms), client thread only; 0 while in use. */
+	private final long[] emptySince = new long[8];
+	private volatile String lastRecap = "";
 
 	@Provides
 	FlipLedgerConfig provideConfig(ConfigManager configManager)
@@ -179,10 +190,12 @@ public class FlipLedgerPlugin extends Plugin
 		clock = new Timer(10_000, e ->
 		{
 			refreshPanel();
-			if (!lastOffers.isEmpty())
+			// Keeps the offer and idle-slot timers ticking, and counts how busy the slots are
+			clientThread.invokeLater(() ->
 			{
-				clientThread.invokeLater(this::refreshOffers); // keeps the offer timers ticking
-			}
+				sampleSlots();
+				refreshOffers();
+			});
 		});
 		clock.start();
 
@@ -249,7 +262,9 @@ public class FlipLedgerPlugin extends Plugin
 			loggedIn = false;
 			data = null;
 			loadedProfile = null;
+			lastRecap = buildRecap();
 			resetAllSessions(); // logging out ends the session; saved totals and crew events are untouched
+			Arrays.fill(emptySince, 0);
 			refreshPanel();
 			refreshOffers();
 		}
@@ -621,6 +636,7 @@ public class FlipLedgerPlugin extends Plugin
 			deltaSpent = spent;
 		}
 		data.slots[slot] = new LedgerData.SlotSnapshot(itemId, buy, qty, spent, placedAt, lastProgressAt);
+		data.slotsSeen = Math.max(data.slotsSeen, slot + 1);
 
 		if (deltaQty > 0)
 		{
@@ -836,6 +852,7 @@ public class FlipLedgerPlugin extends Plugin
 			}
 			long profit = coins - cost;
 			data.alchProfit += profit;
+			addDayProfit(profit);
 			data.alchCasts++;
 			alchSessionProfit += profit;
 			alchSessionCasts++;
@@ -1081,6 +1098,29 @@ public class FlipLedgerPlugin extends Plugin
 
 		data.allTimeProfit += profit;
 		sessionProfit += profit;
+		addDayProfit(profit);
+		if (closed)
+		{
+			if (f.profit > sessionBest)
+			{
+				sessionBest = f.profit;
+				sessionBestName = name;
+			}
+			if (f.profit < sessionWorst)
+			{
+				sessionWorst = f.profit;
+				sessionWorstName = name;
+			}
+			long prevBest = data.bestFlip;
+			if (f.profit > prevBest)
+			{
+				data.bestFlip = f.profit;
+				if (prevBest > 0)
+				{
+					milestone(String.format("Flip Ledger: new best flip! %s on %s", Gp.signed(f.profit), name));
+				}
+			}
+		}
 
 		if (config.showFloatingText())
 		{
@@ -1161,6 +1201,12 @@ public class FlipLedgerPlugin extends Plugin
 		sessionStart = System.currentTimeMillis();
 		sessionProfit = 0;
 		sessionFlips = 0;
+		sessionBest = 0;
+		sessionBestName = null;
+		sessionWorst = 0;
+		sessionWorstName = null;
+		busySum = 0;
+		busySamples = 0;
 	}
 
 	/** Flip and Alch session counters only. All-time totals and the crew leaderboard events live in LedgerData. */
@@ -1238,11 +1284,140 @@ public class FlipLedgerPlugin extends Plugin
 		boolean itemsChanged = !offerItems(views).equals(offerItems(lastOffers));
 		lastOffers = views;
 		geSlotTimers.update(views);
+		updateIdle(views);
 		if (itemsChanged)
 		{
 			executor.execute(this::recomputeSuggestions); // refill suggestions when an item enters or leaves the GE
 		}
 		SwingUtilities.invokeLater(() -> panel.updateOffers(views));
+	}
+
+	/** Add to today's profit, and say so once when that crosses the daily goal. */
+	private void addDayProfit(long profit)
+	{
+		LedgerData d = data;
+		if (d == null)
+		{
+			return;
+		}
+		long before = d.dayProfitToday();
+		long after = d.addDayProfit(profit);
+		long goal = Suggester.parse(config.dailyGoal(), 0);
+		if (goal > 0 && before < goal && after >= goal)
+		{
+			milestone(String.format("Flip Ledger: daily goal reached! %s today", Gp.signed(after)));
+		}
+	}
+
+	private void milestone(String msg)
+	{
+		if (!config.milestones())
+		{
+			return;
+		}
+		chatMessageManager.queue(QueuedMessage.builder()
+			.type(ChatMessageType.CONSOLE)
+			.runeLiteFormattedMessage("<col=f1c40f>" + msg + "</col>")
+			.build());
+	}
+
+	/** Slots this account can use: 3 until it has used more (a free account never gets past 3). */
+	private int usableSlots()
+	{
+		LedgerData d = data;
+		return Math.min(8, Math.max(3, d == null ? 3 : d.slotsSeen));
+	}
+
+	/** Client thread: count how busy the GE slots are (for the recap). */
+	private void sampleSlots()
+	{
+		if (!loggedIn || data == null)
+		{
+			return;
+		}
+		int active = 0;
+		for (OfferView o : lastOffers)
+		{
+			if (o.status == OfferView.Status.ACTIVE)
+			{
+				active++;
+			}
+		}
+		busySum += Math.min(active, usableSlots()) / (double) usableSlots();
+		busySamples++;
+	}
+
+	/** One line about the session that is ending, or "" if nothing happened. */
+	private String buildRecap()
+	{
+		long ms = System.currentTimeMillis() - sessionStart;
+		if (sessionFlips == 0 && sessionProfit == 0)
+		{
+			return "";
+		}
+		double hours = ms / 3_600_000.0;
+		StringBuilder sb = new StringBuilder("Last session: ").append(Gp.signed(sessionProfit)).append(" in ").append(Gp.age(ms));
+		if (hours > 0.02)
+		{
+			sb.append(" (").append(Gp.shortGp(Math.round(sessionProfit / hours))).append("/hr)");
+		}
+		sb.append(", ").append(sessionFlips).append(sessionFlips == 1 ? " flip" : " flips");
+		if (busySamples > 0)
+		{
+			sb.append(". Slots busy ").append(Math.round(100 * busySum / busySamples)).append("%");
+		}
+		if (sessionBestName != null)
+		{
+			sb.append(". Best ").append(Gp.signed(sessionBest)).append(" ").append(sessionBestName);
+		}
+		if (sessionWorstName != null)
+		{
+			sb.append(". Worst ").append(Gp.signed(sessionWorst)).append(" ").append(sessionWorstName);
+		}
+		return sb.append(".").toString();
+	}
+
+	/** Client thread: track which slots have sat empty, for the slot overlay and the Offers tab. */
+	private void updateIdle(java.util.List<OfferView> views)
+	{
+		long now = System.currentTimeMillis();
+		// Right after login the GE briefly reports every slot as empty
+		boolean settled = loggedIn && config.idleReminders() && client.getGameState() == GameState.LOGGED_IN
+			&& (loginAt == 0 || now - loginAt > LOGIN_GRACE_MS + 5_000);
+		boolean[] used = new boolean[8];
+		int toCollect = 0;
+		for (OfferView v : views)
+		{
+			used[v.slot] = true;
+			if (v.status != OfferView.Status.ACTIVE)
+			{
+				toCollect++;
+			}
+		}
+		int usable = usableSlots();
+		int empty = 0;
+		long longest = 0;
+		for (int i = 0; i < emptySince.length; i++)
+		{
+			if (settled && i < usable && !used[i])
+			{
+				if (emptySince[i] == 0)
+				{
+					emptySince[i] = now;
+				}
+				empty++;
+				longest = Math.max(longest, now - emptySince[i]);
+			}
+			else
+			{
+				emptySince[i] = 0;
+			}
+		}
+		geSlotTimers.updateIdle(emptySince.clone());
+		final int e = empty;
+		final long l = longest;
+		final int c = settled ? toCollect : 0;
+		SwingUtilities.invokeLater(() -> panel.updateIdle(e, l, c));
 	}
 
 	/** Client thread: add the offer's timer and, if it's priced away from the market, a suggested new price. */
@@ -1294,7 +1469,15 @@ public class FlipLedgerPlugin extends Plugin
 		final int flips = sessionFlips;
 		final long elapsed = System.currentTimeMillis() - sessionStart;
 		final LedgerData snapshot = data;
-		SwingUtilities.invokeLater(() -> panel.update(profit, flips, elapsed, snapshot));
+		final long goal = Suggester.parse(config.dailyGoal(), 0);
+		final long today = snapshot == null ? 0 : snapshot.dayProfitToday();
+		final String recap = lastRecap;
+		SwingUtilities.invokeLater(() ->
+		{
+			panel.update(profit, flips, elapsed, snapshot);
+			panel.updateGoal(snapshot == null ? 0 : goal, today);
+			panel.setRecap(recap);
+		});
 		refreshAlch();
 	}
 }

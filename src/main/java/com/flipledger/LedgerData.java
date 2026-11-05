@@ -21,6 +21,31 @@ class LedgerData
 	long allTimeProfit;
 	int allTimeFlips;
 
+	/** Profit made today (local date, flips and alching), for the daily goal. */
+	String dayKey;
+	long dayProfit;
+	/** Biggest single closed flip so far, for the "new best flip" message. */
+	long bestFlip;
+	/** Highest GE slot number ever used, so a free account isn't told its locked slots are idle. */
+	int slotsSeen;
+
+	synchronized long dayProfitToday()
+	{
+		return java.time.LocalDate.now().toString().equals(dayKey) ? dayProfit : 0;
+	}
+
+	synchronized long addDayProfit(long delta)
+	{
+		String today = java.time.LocalDate.now().toString();
+		if (!today.equals(dayKey))
+		{
+			dayKey = today;
+			dayProfit = 0;
+		}
+		dayProfit += delta;
+		return dayProfit;
+	}
+
 	/** Alching: all-time totals, and coins in the bank when it was last open (-1 = never seen). */
 	long alchProfit;
 	long alchCasts;

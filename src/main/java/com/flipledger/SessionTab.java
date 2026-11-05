@@ -43,6 +43,9 @@ class SessionTab extends JPanel
 	private final JLabel sessionFlips = value();
 	private final JLabel sessionTime = value();
 	private final JLabel allTime = value();
+	private final GoalBar goalBar = new GoalBar();
+	private final JLabel recap = new JLabel();
+	private final JLabel idle = new JLabel();
 	private final JPanel offers = section();
 	private final JPanel limitsList = section();
 	private final JPanel suggestions = section();
@@ -93,6 +96,12 @@ class SessionTab extends JPanel
 		stats.setAlignmentX(Component.LEFT_ALIGNMENT);
 		add(stats);
 		add(Box.createVerticalStrut(6));
+		add(goalBar);
+		recap.setForeground(Color.GRAY);
+		recap.setAlignmentX(Component.LEFT_ALIGNMENT);
+		recap.setBorder(new EmptyBorder(4, 0, 4, 0));
+		recap.setVisible(false);
+		add(recap);
 
 		JPanel buttons = new JPanel(new GridLayout(1, 2, 6, 0));
 		buttons.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -348,6 +357,11 @@ class SessionTab extends JPanel
 		h.setBorder(new EmptyBorder(4, 0, 6, 0));
 		h.setAlignmentX(Component.LEFT_ALIGNMENT);
 		p.add(h);
+		idle.setForeground(ORANGE);
+		idle.setAlignmentX(Component.LEFT_ALIGNMENT);
+		idle.setBorder(new EmptyBorder(0, 0, 6, 0));
+		idle.setVisible(false);
+		p.add(idle);
 		p.add(offers);
 		JLabel lh = new JLabel("Buy limits (4 hours)");
 		lh.setForeground(Color.WHITE);
@@ -440,6 +454,37 @@ class SessionTab extends JPanel
 		p.setVerticalAlignment(JLabel.TOP);
 		c.add(p, BorderLayout.EAST);
 		finish(flips, c, n);
+	}
+
+	// ---------- goal, recap, idle slots ----------
+
+	void updateGoal(long goal, long today)
+	{
+		goalBar.set(goal, today);
+	}
+
+	/** The summary of the session that just ended; empty or null hides it. */
+	void setRecap(String text)
+	{
+		boolean has = text != null && !text.isEmpty();
+		recap.setText(has ? "<html><body style='width:150px'>" + text.replace("<", "&lt;") + "</body></html>" : "");
+		recap.setVisible(has);
+	}
+
+	/** Empty slots (and how long the longest has sat empty), and finished offers waiting to be collected. */
+	void updateIdle(int empty, long longestMs, int toCollect)
+	{
+		StringBuilder sb = new StringBuilder();
+		if (empty > 0)
+		{
+			sb.append(empty == 1 ? "1 idle slot" : empty + " idle slots").append(" (longest ").append(Gp.age(longestMs)).append(")");
+		}
+		if (toCollect > 0)
+		{
+			sb.append(sb.length() > 0 ? " · " : "").append(toCollect).append(" to collect");
+		}
+		idle.setText(sb.length() == 0 ? "" : "<html><body style='width:150px'>" + sb + ". An empty slot earns nothing.</body></html>");
+		idle.setVisible(sb.length() > 0);
 	}
 
 	// ---------- current offers ----------

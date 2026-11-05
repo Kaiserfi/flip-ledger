@@ -54,6 +54,7 @@ class SettingsTab extends JPanel
 		gpField("GP to use", "budget", config::budget, "Total gp suggestions may use");
 		gpField("Max per slot", "maxPerSlot", config::maxPerSlot, "Most gp in one item");
 		gpField("Min profit", "minProfit", config::minProfit, "Smallest profit worth a slot");
+		gpField("Daily goal", "dailyGoal", config::dailyGoal, "Profit to aim for each day (0 turns the bar off)");
 
 		JComboBox<FlipLedgerConfig.FillWindow> fill = new JComboBox<>(FlipLedgerConfig.FillWindow.values());
 		fill.setSelectedItem(config.fillWindow());
@@ -91,6 +92,8 @@ class SettingsTab extends JPanel
 		check("Offer corrections", "offerCorrections", config.offerCorrections());
 		check("Offer alerts (chat + notification)", "offerAlerts", config.offerAlerts());
 		check("Timers on GE slots", "geSlotTimers", config.geSlotTimers());
+		check("Idle slot reminders", "idleReminders", config.idleReminders());
+		check("Milestone messages", "milestones", config.milestones());
 		check("Profit on GE sell slots", "geSlotProfit", config.geSlotProfit());
 		check("Floating text on player", "showFloatingText", config.showFloatingText());
 		check("Floating text on alch", "showAlchText", config.showAlchText());

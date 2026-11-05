@@ -127,6 +127,30 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "dailyGoal", name = "Daily goal",
+		description = "Profit to aim for each day, e.g. 500k or 2m. Shows a progress bar on the Session tab. 0 turns it off",
+		section = session, position = 8)
+	default String dailyGoal()
+	{
+		return "500k";
+	}
+
+	@ConfigItem(keyName = "idleReminders", name = "Idle slot reminders",
+		description = "Show how long a Grand Exchange slot has sat empty, on the slot and on the Offers tab",
+		section = display, position = 10)
+	default boolean idleReminders()
+	{
+		return true;
+	}
+
+	@ConfigItem(keyName = "milestones", name = "Milestone messages",
+		description = "A chat message when you reach your daily goal or beat your best flip",
+		section = display, position = 11)
+	default boolean milestones()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "catPotions", name = "Potions", description = "", section = types, position = 1)
 	default boolean catPotions()
 	{

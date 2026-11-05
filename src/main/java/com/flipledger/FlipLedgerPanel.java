@@ -119,6 +119,21 @@ class FlipLedgerPanel extends PluginPanel
 		session.updateOffers(views);
 	}
 
+	void updateGoal(long goal, long today)
+	{
+		session.updateGoal(goal, today);
+	}
+
+	void setRecap(String text)
+	{
+		session.setRecap(text);
+	}
+
+	void updateIdle(int empty, long longestMs, int toCollect)
+	{
+		session.updateIdle(empty, longestMs, toCollect);
+	}
+
 	void updateSuggestions(List<Suggester.Suggestion> list, String status)
 	{
 		session.updateSuggestions(list, status);

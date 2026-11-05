@@ -30,6 +30,10 @@ class GeSlotTimerOverlay extends Overlay
 	private final Client client;
 	private final FlipLedgerConfig config;
 	private volatile List<OfferView> offers = Collections.emptyList();
+	/** Per slot: when it became empty (ms), or 0 if it's in use. */
+	private volatile long[] emptySince = new long[8];
+	private static final long IDLE_SHOW_AFTER_MS = 60_000;
+	private static final long IDLE_URGENT_MS = 3 * 60_000;
 
 	@Inject
 	GeSlotTimerOverlay(Client client, FlipLedgerConfig config)
@@ -45,9 +49,15 @@ class GeSlotTimerOverlay extends Overlay
 		offers = views == null ? Collections.emptyList() : views;
 	}
 
+	void updateIdle(long[] since)
+	{
+		emptySince = since == null ? new long[8] : since;
+	}
+
 	void clear()
 	{
 		offers = Collections.emptyList();
+		emptySince = new long[8];
 	}
 
 	@Override
@@ -56,7 +66,9 @@ class GeSlotTimerOverlay extends Overlay
 		List<OfferView> list = offers;
 		boolean timers = config.geSlotTimers();
 		boolean profits = config.geSlotProfit();
-		if (list.isEmpty() || !(timers || profits))
+		long[] idle = emptySince;
+		boolean idleOn = config.idleReminders();
+		if ((list.isEmpty() || !(timers || profits)) && !idleOn)
 		{
 			return null;
 		}
@@ -64,6 +76,24 @@ class GeSlotTimerOverlay extends Overlay
 		g.setFont(font);
 		FontMetrics fm = g.getFontMetrics();
 		long now = System.currentTimeMillis();
+		if (idleOn)
+		{
+			for (int i = 0; i < idle.length; i++)
+			{
+				if (idle[i] <= 0 || now - idle[i] < IDLE_SHOW_AFTER_MS)
+				{
+					continue;
+				}
+				Widget w = client.getWidget(InterfaceID.GeOffers.INDEX_0 + i);
+				if (w == null || w.isHidden() || w.getBounds() == null || w.getBounds().width <= 0)
+				{
+					continue;
+				}
+				long idleFor = now - idle[i];
+				draw(g, fm, "Idle " + Gp.age(idleFor), w.getBounds(), w.getBounds().y + fm.getAscent() + 3,
+					idleFor >= IDLE_URGENT_MS ? STALLED : WAITING);
+			}
+		}
 
 		Font osrs = FontManager.getRunescapeFont();
 		for (OfferView v : list)
