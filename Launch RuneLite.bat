@@ -1,18 +1,13 @@
 @echo off
-rem Starts RuneLite with Flip Ledger and all your normal Plugin Hub plugins.
-rem First time (and after changing the plugin): run the Gradle task "devJar" in IntelliJ.
-rem Add "safe" after the file name (Launch RuneLite.bat safe) to skip Plugin Hub plugins.
-rem Add "debug" to keep this window open and write build\launch.log (use it if RuneLite won't start).
+rem Builds Flip Ledger (only if the code changed), then starts RuneLite with Flip Ledger and your normal Plugin Hub plugins.
+rem   Launch RuneLite.bat          build if needed, launch, close this window
+rem   Launch RuneLite.bat safe     also skip Plugin Hub plugins
+rem   Launch RuneLite.bat quick    skip the build step
+rem   Launch RuneLite.bat debug    keep this window open and write build\launch.log
 setlocal
 title RuneLite + Flip Ledger
 set "JAR=%~dp0build\libs\flip-ledger-runelite.jar"
 set "LOG=%~dp0build\launch.log"
-if not exist "%JAR%" (
-  echo Can't find %JAR%
-  echo In IntelliJ, open the Gradle panel and run Tasks ^> application ^> devJar first.
-  pause
-  exit /b 1
-)
 
 rem Find Java 11+: IntelliJ's downloaded JDKs first, then JAVA_HOME, then PATH
 set "JAVA="
@@ -27,14 +22,35 @@ if not defined JAVA (
 
 set "EXTRA="
 set "DEBUG="
+set "QUICK="
 :args
-if "%~1"=="" goto run
+if "%~1"=="" goto build
 if /i "%~1"=="safe" set "EXTRA=--safe-mode"
 if /i "%~1"=="debug" set "DEBUG=1"
+if /i "%~1"=="quick" set "QUICK=1"
 shift
 goto args
 
-:run
+:build
+if defined QUICK goto check
+rem Build with the same Java (gradlew uses JAVA_HOME). Gradle skips the work when nothing changed.
+for %%I in ("%JAVA%\..\..") do set "JAVA_HOME=%%~fI"
+echo Building Flip Ledger (first time can take a few minutes)...
+call "%~dp0gradlew.bat" -p "%~dp0." devJar -q
+if errorlevel 1 (
+  echo.
+  echo The build failed. Fix the errors above, or run with "quick" to launch the last good build.
+  pause
+  exit /b 1
+)
+
+:check
+if not exist "%JAR%" (
+  echo Can't find %JAR%
+  echo Run this again without "quick" so it can build first.
+  pause
+  exit /b 1
+)
 if defined DEBUG goto debug
 
 rem Normal launch: start RuneLite with javaw (no console window) and close this window right away.
