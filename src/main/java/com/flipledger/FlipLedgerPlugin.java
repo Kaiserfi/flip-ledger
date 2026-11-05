@@ -1271,7 +1271,7 @@ public class FlipLedgerPlugin extends Plugin
 		}
 		view.advice = Correction.advise(view.buy, view.price, view.total - view.filled,
 			prices.latestFor(view.itemId), view.avgCost, view.stalled, now / 1000);
-		if (view.advice != null && view.stalled && !Long.valueOf(snap.placedAt).equals(offerAlerted.get(view.slot)))
+		if (config.offerAlerts() && view.advice != null && view.stalled && !Long.valueOf(snap.placedAt).equals(offerAlerted.get(view.slot)))
 		{
 			offerAlerted.put(view.slot, snap.placedAt);
 			String msg = String.format("Flip Ledger: your %s of %s has waited %s. %s", view.buy ? "buy" : "sell",

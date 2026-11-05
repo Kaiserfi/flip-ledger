@@ -251,9 +251,17 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "offerAlerts", name = "Offer alerts",
+		description = "Also post a chat message and notification, once, when an offer has stalled and has a correction. The Hold/Raise/Lower lines show either way",
+		section = display, position = 7)
+	default boolean offerAlerts()
+	{
+		return false;
+	}
+
 	@ConfigItem(keyName = "geSlotTimers", name = "Timers on GE slots",
 		description = "Show how long each offer has waited (and its suggested new price) on the slot in the Grand Exchange window",
-		section = display, position = 7)
+		section = display, position = 8)
 	default boolean geSlotTimers()
 	{
 		return true;
@@ -261,7 +269,7 @@ public interface FlipLedgerConfig extends Config
 
 	@ConfigItem(keyName = "geSlotProfit", name = "Profit on GE sell slots",
 		description = "Show the expected profit (green +, red -) over the progress bar of each sell offer you have a cost for",
-		section = display, position = 8)
+		section = display, position = 9)
 	default boolean geSlotProfit()
 	{
 		return true;

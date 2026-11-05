@@ -88,6 +88,7 @@ class SettingsTab extends JPanel
 		check("Price check while making offers", "showPriceCheck", config.showPriceCheck());
 		check("Price drop alerts", "crashAlerts", config.crashAlerts());
 		check("Offer corrections", "offerCorrections", config.offerCorrections());
+		check("Offer alerts (chat + notification)", "offerAlerts", config.offerAlerts());
 		check("Timers on GE slots", "geSlotTimers", config.geSlotTimers());
 		check("Profit on GE sell slots", "geSlotProfit", config.geSlotProfit());
 		check("Floating text on player", "showFloatingText", config.showFloatingText());
