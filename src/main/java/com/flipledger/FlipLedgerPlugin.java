@@ -222,6 +222,10 @@ public class FlipLedgerPlugin extends Plugin
 		if (e.getGameState() == GameState.LOGGED_IN)
 		{
 			loginAt = System.currentTimeMillis();
+			if (!loggedIn)
+			{
+				resetAllSessions(); // a fresh login starts a fresh session (world hops keep it)
+			}
 			onLogin();
 			ensureLoaded();
 			refreshPanel();
@@ -232,6 +236,7 @@ public class FlipLedgerPlugin extends Plugin
 			loggedIn = false;
 			data = null;
 			loadedProfile = null;
+			resetAllSessions(); // logging out ends the session; saved totals and crew events are untouched
 			refreshPanel();
 			refreshOffers();
 		}
@@ -1122,6 +1127,16 @@ public class FlipLedgerPlugin extends Plugin
 		sessionStart = System.currentTimeMillis();
 		sessionProfit = 0;
 		sessionFlips = 0;
+	}
+
+	/** Flip and Alch session counters only. All-time totals and the crew leaderboard events live in LedgerData. */
+	private void resetAllSessions()
+	{
+		resetSession();
+		alchSessionStart = System.currentTimeMillis();
+		alchSessionCasts = 0;
+		alchSessionProfit = 0;
+		lastAlch = null;
 	}
 
 	private void resetSessionFromPanel()
