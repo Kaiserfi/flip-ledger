@@ -172,7 +172,14 @@ public class FlipLedgerPlugin extends Plugin
 		overlayManager.add(priceCheck);
 
 		// Keep session time and gp/hr ticking
-		clock = new Timer(10_000, e -> refreshPanel());
+		clock = new Timer(10_000, e ->
+		{
+			refreshPanel();
+			if (!lastOffers.isEmpty())
+			{
+				clientThread.invokeLater(this::refreshOffers); // keeps the offer timers ticking
+			}
+		});
 		clock.start();
 
 		// Checks once a minute whether a price file is due; the files themselves refresh every 10-30 min
@@ -337,6 +344,9 @@ public class FlipLedgerPlugin extends Plugin
 	private final java.util.Map<Integer, Long> alerted = new java.util.concurrent.ConcurrentHashMap<>();
 	private long lastWatch;
 	private static final long WATCH_EVERY_MS = 120_000;
+	private static final long OFFER_PRICE_MAX_AGE_MS = 90_000;
+	/** Slot -> placedAt of the offer we already alerted about, so each stalled offer alerts once. */
+	private final java.util.Map<Integer, Long> offerAlerted = new java.util.concurrent.ConcurrentHashMap<>();
 	private static final long ALERT_COOLDOWN_MS = 15 * 60_000L;
 
 	/** Every 2 minutes: check the latest trades on items you hold or are selling, and warn on a drop. */
@@ -438,9 +448,21 @@ public class FlipLedgerPlugin extends Plugin
 			Math.round(p.valueEach), Math.round(asIs));
 	}
 
+	/** Keep recent trades fresh for the items in your GE slots, so stalled offers can be corrected. */
+	private void watchOffers()
+	{
+		if (!loggedIn || !config.offerCorrections() || lastOffers.isEmpty())
+		{
+			return;
+		}
+		prices.refreshLatest(offerItems(lastOffers), OFFER_PRICE_MAX_AGE_MS,
+			() -> clientThread.invokeLater(this::refreshOffers));
+	}
+
 	private void tickPrices()
 	{
 		watchHoldings();
+		watchOffers();
 		LedgerData d = data;
 		if (loggedIn && d != null)
 		{
@@ -576,17 +598,23 @@ public class FlipLedgerPlugin extends Plugin
 		LedgerData.SlotSnapshot prev = data.slots[slot];
 		int deltaQty;
 		long deltaSpent;
+		long nowMs = System.currentTimeMillis();
+		long placedAt = nowMs;
+		long lastProgressAt = nowMs;
 		if (prev != null && prev.itemId == itemId && prev.buy == buy && qty >= prev.qty)
 		{
 			deltaQty = qty - prev.qty;
 			deltaSpent = spent - prev.spent;
+			// Same offer as before: keep its timers (0 = saved by an older version, start counting now)
+			placedAt = prev.placedAt > 0 ? prev.placedAt : nowMs;
+			lastProgressAt = deltaQty > 0 || prev.lastProgressAt <= 0 ? nowMs : prev.lastProgressAt;
 		}
 		else
 		{
 			deltaQty = qty;
 			deltaSpent = spent;
 		}
-		data.slots[slot] = new LedgerData.SlotSnapshot(itemId, buy, qty, spent);
+		data.slots[slot] = new LedgerData.SlotSnapshot(itemId, buy, qty, spent, placedAt, lastProgressAt);
 
 		if (deltaQty > 0)
 		{
@@ -1195,8 +1223,10 @@ public class FlipLedgerPlugin extends Plugin
 					}
 				}
 				String name = itemManager.getItemComposition(o.getItemId()).getName();
-				views.add(new OfferView(i, o.getItemId(), name, buy, status, o.getQuantitySold(), o.getTotalQuantity(),
-					o.getPrice(), o.getSpent(), avg));
+				OfferView view = new OfferView(i, o.getItemId(), name, buy, status, o.getQuantitySold(), o.getTotalQuantity(),
+					o.getPrice(), o.getSpent(), avg);
+				annotate(view, data == null ? null : data.slots[i]);
+				views.add(view);
 			}
 		}
 		boolean itemsChanged = !offerItems(views).equals(offerItems(lastOffers));
@@ -1206,6 +1236,45 @@ public class FlipLedgerPlugin extends Plugin
 			executor.execute(this::recomputeSuggestions); // refill suggestions when an item enters or leaves the GE
 		}
 		SwingUtilities.invokeLater(() -> panel.updateOffers(views));
+	}
+
+	/** Client thread: add the offer's timer and, if it's priced away from the market, a suggested new price. */
+	private void annotate(OfferView view, LedgerData.SlotSnapshot snap)
+	{
+		if (snap == null || snap.itemId != view.itemId || snap.buy != view.buy)
+		{
+			return;
+		}
+		long now = System.currentTimeMillis();
+		if (snap.placedAt <= 0)
+		{
+			snap.placedAt = now;
+			snap.lastProgressAt = now;
+		}
+		view.placedAt = snap.placedAt;
+		if (view.status != OfferView.Status.ACTIVE)
+		{
+			return;
+		}
+		long windowMs = config.fillWindow().minutes * 60_000L;
+		view.stalled = now - Math.max(snap.placedAt, snap.lastProgressAt) > windowMs;
+		if (!config.offerCorrections())
+		{
+			return;
+		}
+		view.advice = Correction.advise(view.buy, view.price, view.total - view.filled,
+			prices.latestFor(view.itemId), view.avgCost, view.stalled, now / 1000);
+		if (view.advice != null && view.stalled && !Long.valueOf(snap.placedAt).equals(offerAlerted.get(view.slot)))
+		{
+			offerAlerted.put(view.slot, snap.placedAt);
+			String msg = String.format("Flip Ledger: your %s of %s has waited %s. %s", view.buy ? "buy" : "sell",
+				view.name, Gp.age(now - snap.placedAt), view.advice.text);
+			chatMessageManager.queue(QueuedMessage.builder()
+				.type(ChatMessageType.CONSOLE)
+				.runeLiteFormattedMessage("<col=e67e22>" + msg + "</col>")
+				.build());
+			notifier.notify(msg);
+		}
 	}
 
 	private void refreshPanel()

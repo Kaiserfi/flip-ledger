@@ -68,6 +68,18 @@ final class Gp
 		return n >= 0 ? PROFIT : LOSS;
 	}
 
+	/** How long ago, compactly: 45s, 12m, 1h05m. */
+	static String age(long ms)
+	{
+		long s = Math.max(0, ms / 1000);
+		if (s < 60)
+		{
+			return s + "s";
+		}
+		long m = s / 60;
+		return m < 60 ? m + "m" : (m / 60) + "h" + String.format("%02d", m % 60) + "m";
+	}
+
 	/** A time later today (or tomorrow) as "in 2h 10m (9:42 PM)". */
 	static String clock(long epochMs)
 	{

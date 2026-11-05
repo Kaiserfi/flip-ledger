@@ -23,6 +23,11 @@ class OfferView
 	final long spent;
 	/** Sells only: average cost of what you're holding, or -1 if unknown (bought before the plugin). */
 	final long avgCost;
+	/** When this offer was placed (ms; 0 = unknown), and whether it has gone a whole fill window without filling. */
+	long placedAt;
+	boolean stalled;
+	/** A suggested new price, or null. */
+	Correction.Advice advice;
 
 	OfferView(int slot, int itemId, String name, boolean buy, Status status, int filled, int total, long price, long spent, long avgCost)
 	{

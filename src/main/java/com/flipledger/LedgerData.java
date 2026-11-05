@@ -299,13 +299,23 @@ class LedgerData
 		boolean buy;
 		int qty;
 		long spent;
+		/** When the offer was first seen, and when it last filled (ms). 0 in data saved by older versions. */
+		long placedAt;
+		long lastProgressAt;
 
 		SlotSnapshot(int itemId, boolean buy, int qty, long spent)
+		{
+			this(itemId, buy, qty, spent, 0, 0);
+		}
+
+		SlotSnapshot(int itemId, boolean buy, int qty, long spent, long placedAt, long lastProgressAt)
 		{
 			this.itemId = itemId;
 			this.buy = buy;
 			this.qty = qty;
 			this.spent = spent;
+			this.placedAt = placedAt;
+			this.lastProgressAt = lastProgressAt;
 		}
 	}
 

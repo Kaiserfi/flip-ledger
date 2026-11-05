@@ -36,6 +36,7 @@ class SessionTab extends JPanel
 	private static final Color STEADY = new Color(0x2ECC71);
 	private static final Color SETTLED = new Color(0xF1C40F);
 	private static final Color RISKY = new Color(0xE74C3C);
+	private static final Color ORANGE = new Color(0xE67E22);
 
 	private final JLabel sessionProfit = new JLabel("+0 gp");
 	private final JLabel gpHour = value();
@@ -454,6 +455,10 @@ class SessionTab extends JPanel
 		for (OfferView v : lastOffers)
 		{
 			offers.add(offerRow(v));
+			if (v.advice != null)
+			{
+				offers.add(adviceRow(v));
+			}
 			offers.add(Box.createVerticalStrut(2));
 		}
 		offers.revalidate();
@@ -484,8 +489,13 @@ class SessionTab extends JPanel
 		String right = v.status == OfferView.Status.COMPLETE ? "collect"
 			: v.status == OfferView.Status.CANCELLED ? "cancelled"
 			: String.format("%s/%s", Gp.shortGp(v.filled), Gp.shortGp(v.total));
+		boolean timed = v.status == OfferView.Status.ACTIVE && v.placedAt > 0;
+		if (timed)
+		{
+			right += " · " + Gp.age(System.currentTimeMillis() - v.placedAt);
+		}
 		JLabel amt = new JLabel(right);
-		amt.setForeground(v.status == OfferView.Status.COMPLETE ? c : Color.LIGHT_GRAY);
+		amt.setForeground(v.status == OfferView.Status.COMPLETE ? c : v.stalled ? ORANGE : Color.LIGHT_GRAY);
 		row.add(left, BorderLayout.CENTER);
 		row.add(amt, BorderLayout.EAST);
 
@@ -511,11 +521,33 @@ class SessionTab extends JPanel
 		{
 			tip.append("<br>Spent ").append(Gp.shortGp(v.spent)).append(" of ").append(Gp.shortGp(v.price * v.total));
 		}
-		else if (v.avgCost >= 0)
+		if (timed)
+		{
+			tip.append("<br>Waiting ").append(Gp.age(System.currentTimeMillis() - v.placedAt))
+				.append(v.stalled ? " (longer than your fill window)" : "");
+		}
+		if (!v.buy && v.avgCost >= 0)
 		{
 			tip.append("<br>Est. ").append(Gp.signed(v.estProfit())).append(String.format(" &middot; break-even %,d", v.breakEven()));
 		}
 		row.setToolTipText(tip.append("</html>").toString());
+		return row;
+	}
+
+	/** A highlighted line under an offer that is priced away from the market. */
+	private JPanel adviceRow(OfferView v)
+	{
+		Color col = v.advice.loss ? RISKY : ORANGE;
+		JPanel row = new JPanel(new BorderLayout());
+		row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		row.setBorder(new EmptyBorder(2, 6, 4, 6));
+		row.setAlignmentX(Component.LEFT_ALIGNMENT);
+		JLabel l = new JLabel("<html><body style='width:150px'><b>" + (v.advice.loss ? "Careful: " : "")
+			+ v.advice.text.replace("<", "&lt;") + "</b></body></html>");
+		l.setForeground(col);
+		row.add(l, BorderLayout.CENTER);
+		row.setToolTipText("<html>Based on the latest trades on the Wiki price feed.<br>"
+			+ "Cancel the offer and relist at this price to fill faster.</html>");
 		return row;
 	}
 

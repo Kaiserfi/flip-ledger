@@ -87,6 +87,7 @@ class SettingsTab extends JPanel
 		header("Display");
 		check("Price check while making offers", "showPriceCheck", config.showPriceCheck());
 		check("Price drop alerts", "crashAlerts", config.crashAlerts());
+		check("Offer corrections", "offerCorrections", config.offerCorrections());
 		check("Floating text on player", "showFloatingText", config.showFloatingText());
 		check("Floating text on alch", "showAlchText", config.showAlchText());
 		check("Coin pile on profit popups", "coinIcon", config.coinIcon());

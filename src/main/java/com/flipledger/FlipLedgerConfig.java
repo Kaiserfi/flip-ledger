@@ -243,6 +243,14 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "offerCorrections", name = "Offer corrections",
+		description = "Suggest a new price for buys and sells that are priced away from the market, and alert once when one has stalled. Uses public OSRS Wiki prices",
+		section = display, position = 6)
+	default boolean offerCorrections()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "showChatMessage", name = "Chat message", description = "Post a line in your chat box (only you see it) for each sale",
 		section = display, position = 5)
 	default boolean showChatMessage()
