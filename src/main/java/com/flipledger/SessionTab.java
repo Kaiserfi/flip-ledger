@@ -98,7 +98,7 @@ class SessionTab extends JPanel
 		buttons.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 		buttons.setAlignmentX(Component.LEFT_ALIGNMENT);
 		JButton reset = new JButton("Reset");
-		reset.setToolTipText("Start a new session (keeps all-time profit and history)");
+		reset.setToolTipText("Start a new session: clears the flip list (keeps all-time profit and saved data)");
 		reset.addActionListener(e -> onReset.run());
 		JButton clear = new JButton("Clear all");
 		clear.setToolTipText("Clear all-time profit and flip history for this account");
@@ -231,6 +231,7 @@ class SessionTab extends JPanel
 			allTime.setForeground(Gp.color(data.allTimeProfit));
 		}
 		lastData = data;
+		sessionStartMs = System.currentTimeMillis() - sessionMs;
 		renderFlips();
 		renderLimits();
 	}
@@ -272,22 +273,25 @@ class SessionTab extends JPanel
 		limitsList.repaint();
 	}
 
+	/** When this session began; the flip list only shows flips with activity since then. */
+	private long sessionStartMs;
+
 	private void renderFlips()
 	{
 		flips.removeAll();
 		LedgerData data = lastData;
 		if (data == null || data.history.isEmpty())
 		{
-			empty(flips, data == null ? "Log in to see your flips." : "No flips yet. Buy something on the GE and it shows up here.");
+			empty(flips, data == null ? "Log in to see your flips." : "No flips this session. Buy something on the GE and it shows up here.");
 		}
 		else
 		{
 			int shown = 0;
 			for (LedgerData.Flip f : new ArrayList<>(data.history))
 			{
-				if (f.qty <= 0)
+				if (f.qty <= 0 || f.time < sessionStartMs)
 				{
-					continue; // nothing sold yet: it's on the Offers tab
+					continue; // nothing sold yet (Offers tab) or last traded before this session
 				}
 				flipRow(f);
 				if (++shown >= SHOWN_FLIPS)
@@ -297,7 +301,7 @@ class SessionTab extends JPanel
 			}
 			if (shown == 0)
 			{
-				empty(flips, "No sales yet. Completed flips show up here.");
+				empty(flips, "No sales this session. Completed flips show up here.");
 			}
 		}
 		flips.revalidate();
