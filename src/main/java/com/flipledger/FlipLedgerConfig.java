@@ -259,6 +259,14 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "geSlotProfit", name = "Profit on GE sell slots",
+		description = "Show the expected profit (green +, red -) over the progress bar of each sell offer you have a cost for",
+		section = display, position = 8)
+	default boolean geSlotProfit()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "showChatMessage", name = "Chat message", description = "Post a line in your chat box (only you see it) for each sale",
 		section = display, position = 5)
 	default boolean showChatMessage()

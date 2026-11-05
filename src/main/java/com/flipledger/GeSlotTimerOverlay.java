@@ -54,7 +54,9 @@ class GeSlotTimerOverlay extends Overlay
 	public Dimension render(Graphics2D g)
 	{
 		List<OfferView> list = offers;
-		if (list.isEmpty() || !config.geSlotTimers())
+		boolean timers = config.geSlotTimers();
+		boolean profits = config.geSlotProfit();
+		if (list.isEmpty() || !(timers || profits))
 		{
 			return null;
 		}
@@ -63,9 +65,10 @@ class GeSlotTimerOverlay extends Overlay
 		FontMetrics fm = g.getFontMetrics();
 		long now = System.currentTimeMillis();
 
+		Font osrs = FontManager.getRunescapeFont();
 		for (OfferView v : list)
 		{
-			if (v.status != OfferView.Status.ACTIVE || v.placedAt <= 0)
+			if (v.status != OfferView.Status.ACTIVE)
 			{
 				continue;
 			}
@@ -79,15 +82,38 @@ class GeSlotTimerOverlay extends Overlay
 			{
 				continue;
 			}
-			int y = b.y + fm.getAscent() + 3;
-			draw(g, fm, Gp.age(now - v.placedAt), b, y, v.stalled ? STALLED : WAITING);
-			if (v.advice != null)
+			if (timers && v.placedAt > 0)
 			{
-				String s = v.advice.stop ? (v.buy ? "Cancel?" : "Hold") : (v.buy ? "Raise " : "Lower ") + Gp.shortGp(v.advice.price);
-				draw(g, fm, s, b, y + fm.getHeight(), v.advice.loss ? LOSS : STALLED);
+				int y = b.y + fm.getAscent() + 3;
+				draw(g, fm, Gp.age(now - v.placedAt), b, y, v.stalled ? STALLED : WAITING);
+				if (v.advice != null)
+				{
+					String s = v.advice.stop ? (v.buy ? "Cancel?" : "Hold") : (v.buy ? "Raise " : "Lower ") + Gp.shortGp(v.advice.price);
+					draw(g, fm, s, b, y + fm.getHeight(), v.advice.loss ? LOSS : STALLED);
+				}
+			}
+			if (profits && !v.buy && v.avgCost >= 0)
+			{
+				drawProfit(g, osrs, b, v.estProfit());
 			}
 		}
 		return null;
+	}
+
+	/** Expected profit of a sell: green +N or red -N, centred on the offer's progress bar. */
+	private static void drawProfit(Graphics2D g, Font osrs, Rectangle b, long profit)
+	{
+		g.setFont(osrs);
+		FontMetrics fm = g.getFontMetrics();
+		String s = (profit >= 0 ? "+" : "") + Gp.shortGp(profit);
+		int x = b.x + (b.width - fm.stringWidth(s)) / 2;
+		// The progress bar sits about three quarters of the way down the slot
+		int y = b.y + Math.round(b.height * 0.74f) + fm.getAscent() / 2 - 1;
+		g.setColor(Color.BLACK);
+		g.drawString(s, x + 1, y + 1);
+		g.setColor(profit >= 0 ? Gp.PROFIT : Gp.LOSS);
+		g.drawString(s, x, y);
+		g.setFont(FontManager.getRunescapeSmallFont());
 	}
 
 	private static void draw(Graphics2D g, FontMetrics fm, String s, Rectangle b, int y, Color c)
