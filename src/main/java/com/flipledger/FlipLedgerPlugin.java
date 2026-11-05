@@ -96,6 +96,9 @@ public class FlipLedgerPlugin extends Plugin
 	private PriceCheckOverlay priceCheck;
 
 	@Inject
+	private GeSlotTimerOverlay geSlotTimers;
+
+	@Inject
 	private Notifier notifier;
 
 	@Inject
@@ -169,6 +172,7 @@ public class FlipLedgerPlugin extends Plugin
 		clientToolbar.addNavigation(navButton);
 		overlayManager.add(floatingText);
 		overlayManager.add(geSlotText);
+		overlayManager.add(geSlotTimers);
 		overlayManager.add(priceCheck);
 
 		// Keep session time and gp/hr ticking
@@ -215,6 +219,8 @@ public class FlipLedgerPlugin extends Plugin
 		overlayManager.remove(floatingText);
 		floatingText.clear();
 		overlayManager.remove(geSlotText);
+		overlayManager.remove(geSlotTimers);
+		geSlotTimers.clear();
 		overlayManager.remove(priceCheck);
 		priceCheck.hide();
 		geSlotText.clear();
@@ -1231,6 +1237,7 @@ public class FlipLedgerPlugin extends Plugin
 		}
 		boolean itemsChanged = !offerItems(views).equals(offerItems(lastOffers));
 		lastOffers = views;
+		geSlotTimers.update(views);
 		if (itemsChanged)
 		{
 			executor.execute(this::recomputeSuggestions); // refill suggestions when an item enters or leaves the GE

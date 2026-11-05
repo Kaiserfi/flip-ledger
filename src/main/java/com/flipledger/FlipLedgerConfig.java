@@ -251,6 +251,14 @@ public interface FlipLedgerConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "geSlotTimers", name = "Timers on GE slots",
+		description = "Show how long each offer has waited (and its suggested new price) on the slot in the Grand Exchange window",
+		section = display, position = 7)
+	default boolean geSlotTimers()
+	{
+		return true;
+	}
+
 	@ConfigItem(keyName = "showChatMessage", name = "Chat message", description = "Post a line in your chat box (only you see it) for each sale",
 		section = display, position = 5)
 	default boolean showChatMessage()
